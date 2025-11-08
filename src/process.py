@@ -1,12 +1,15 @@
 """
 数据处理模块：将CSV文件处理成3600个点的光谱数据集
 处理三个数据集：ir_broaden, uv_broaden, raman_broaden
+支持保存为HDF5格式以加速后续加载
 """
 import pandas as pd
 import numpy as np
 from scipy import interpolate
 import os
 from pathlib import Path
+import h5py
+from utils import compute_params
 
 
 def process_spectrum_to_3600(spectrum, target_size=3600):
@@ -93,7 +96,37 @@ def save_processed_data(processed_spectra, x_axis, output_path):
     print(f"Saved processed data to: {output_path}")
 
 
-def process_dataset(input_csv, output_csv, dataset_name, target_size=3600):
+def save_processed_data_h5(processed_spectra, x_axis, output_path,
+                           physical_params=None, baseline_heatmaps=None):
+    """
+    保存处理后的数据到HDF5文件（更快，适合大文件）
+    
+    Args:
+        processed_spectra: 处理后的光谱数据 (n_samples, 3600)
+        x_axis: x轴数据 (3600,)
+        output_path: 输出文件路径
+        physical_params: 物理参数 (n_samples, 7)，可选
+        baseline_heatmaps: 未归一化的方形热图 (n_samples, side, side)，可选
+    """
+    os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else '.', exist_ok=True)
+    
+    with h5py.File(output_path, 'w') as f:
+        f.create_dataset('spectra', data=processed_spectra, compression='gzip', compression_opts=4)
+        f.create_dataset('x_axis', data=x_axis)
+        f.attrs['n_samples'] = len(processed_spectra)
+        f.attrs['spectrum_length'] = processed_spectra.shape[1]
+        # 保存物理参数（预计算的光学特征）
+        if physical_params is not None:
+            f.create_dataset('physical_params', data=physical_params, compression='gzip', compression_opts=4)
+        if baseline_heatmaps is not None:
+            f.create_dataset('heatmaps_unscaled', data=baseline_heatmaps,
+                             compression='gzip', compression_opts=4)
+    
+    print(f"Saved processed data to HDF5: {output_path}")
+
+
+def process_dataset(input_csv, output_csv, dataset_name, target_size=3600, save_h5=False, h5_only=False,
+                   export_physical=True, export_baseline_heatmaps=False):
     """
     处理单个数据集
     
@@ -102,6 +135,10 @@ def process_dataset(input_csv, output_csv, dataset_name, target_size=3600):
         output_csv: 输出CSV文件路径
         dataset_name: 数据集名称（用于打印信息）
         target_size: 目标光谱长度，默认3600
+        save_h5: 是否同时保存为HDF5格式（更快加载）
+        h5_only: 是否只保存HDF5格式（跳过CSV）
+        export_physical: 是否导出物理参数（预计算的光学特征）
+        export_baseline_heatmaps: 是否额外导出未归一化的方形热图 (仅HDF5)
     """
     print(f"\n{'='*60}")
     print(f"Processing dataset: {dataset_name}")
@@ -114,7 +151,59 @@ def process_dataset(input_csv, output_csv, dataset_name, target_size=3600):
     
     try:
         processed_spectra, processed_x_axis = load_and_process_csv(input_csv, target_size)
-        save_processed_data(processed_spectra, processed_x_axis, output_csv)
+
+        physical_arr = None
+        baseline_heatmaps = None
+        if export_physical:
+            physical_list = []
+            for spec in processed_spectra:
+                params = compute_params(spec)
+                # 物理特征向量（与训练时一致）
+                physical_vec = np.array([
+                    params.get('mean', 0),
+                    params.get('std', 0),
+                    params.get('bandwidth', 0),
+                    len(params.get('peak_positions', [])),
+                    params.get('max_intensity', 0),
+                    params.get('energy_range', (0, 0))[0],
+                    params.get('energy_range', (0, 0))[1],
+                ], dtype=np.float32)
+                physical_vec = np.nan_to_num(physical_vec, nan=0.0, posinf=1e6, neginf=-1e6)
+                physical_vec = np.clip(physical_vec, -1e3, 1e3)
+                physical_list.append(physical_vec)
+
+            physical_arr = np.stack(physical_list, axis=0)
+
+        if export_baseline_heatmaps:
+            side = int(np.sqrt(target_size))
+            if side * side != target_size:
+                raise ValueError(
+                    f"Target size {target_size} cannot be reshaped into a square heatmap for baseline export"
+                )
+            baseline_heatmaps = processed_spectra.reshape(-1, side, side).astype(np.float32)
+        
+        # 只保存HDF5格式（推荐，速度更快）
+        if h5_only:
+            output_h5 = output_csv.replace('.csv', '.h5')
+            save_processed_data_h5(
+                processed_spectra, processed_x_axis, output_h5,
+                physical_params=physical_arr,
+                baseline_heatmaps=baseline_heatmaps
+            )
+            print(f"Saved only HDF5 format: {output_h5}")
+        else:
+            # 保存CSV格式
+            save_processed_data(processed_spectra, processed_x_axis, output_csv)
+            
+            # 如果启用，同时保存HDF5格式
+            if save_h5:
+                output_h5 = output_csv.replace('.csv', '.h5')
+                save_processed_data_h5(
+                    processed_spectra, processed_x_axis, output_h5,
+                    physical_params=physical_arr,
+                    baseline_heatmaps=baseline_heatmaps
+                )
+        
         print(f"Successfully processed {dataset_name}: {len(processed_spectra)} samples")
         return True
     except Exception as e:
@@ -129,9 +218,24 @@ def main():
     - uv_broaden  
     - raman_broaden
     """
-    # 设置数据目录（SpectraViT项目下）
-    base_dir = Path(r"E:\SpectraViT")
-    output_dir = Path("data/processed")
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Process spectrum data to 3600 points')
+    parser.add_argument('--data_dir', type=str, default='/mnt/shared-storage-user/xiejiaqing/data/qm9s',
+                       help='Directory containing input CSV files')
+    parser.add_argument('--output_dir', type=str, default='data/processed',
+                       help='Directory to save processed data')
+    parser.add_argument('--save_h5', action='store_true',
+                       help='Also save data in HDF5 format for faster loading')
+    parser.add_argument('--h5_only', action='store_true',
+                       help='Only save HDF5 format (skip CSV, fastest)')
+    parser.add_argument('--export_baseline_heatmaps', action='store_true',
+                       help='Export unnormalized square heatmaps for baseline training/testing (HDF5 only)')
+    args = parser.parse_args()
+    
+    # 设置数据目录
+    base_dir = Path(args.data_dir)
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 定义要处理的数据集
@@ -153,11 +257,23 @@ def main():
     # 处理每个数据集
     results = {}
     for name, paths in datasets.items():
+        # 尝试不同的文件名变体
+        input_file = paths['input']
+        if not input_file.exists():
+            # 尝试没有下划线的版本
+            alt_file = base_dir / f'{name.split("_")[0]}_boraden.csv'
+            if alt_file.exists():
+                input_file = alt_file
+                print(f"Using alternative filename: {alt_file}")
+        
         success = process_dataset(
-            str(paths['input']),
+            str(input_file),
             str(paths['output']),
             name,
-            target_size=3600
+            target_size=3600,
+            save_h5=args.save_h5,
+            h5_only=args.h5_only,
+            export_baseline_heatmaps=args.export_baseline_heatmaps
         )
         results[name] = success
     

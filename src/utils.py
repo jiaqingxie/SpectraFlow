@@ -240,7 +240,7 @@ def get_device(use_cpu=False):
 
 def kl_divergence_loss(mu, logvar):
     """
-    计算KL散度损失（物理先验）
+    计算KL散度损失（与SpectrumViT对齐，使用sum）
     
     Args:
         mu: 潜在空间均值 (B, latent_dim)
@@ -249,12 +249,12 @@ def kl_divergence_loss(mu, logvar):
     Returns:
         kl_loss: KL散度损失
     """
-    return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
+    return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
 
 def reconstruction_loss(recon, target):
     """
-    计算重建损失
+    计算重建损失（与SpectrumViT对齐，使用sum）
     
     Args:
         recon: 重建的光谱
@@ -263,7 +263,7 @@ def reconstruction_loss(recon, target):
     Returns:
         recon_loss: 重建损失
     """
-    return F.mse_loss(recon, target, reduction='mean')
+    return F.mse_loss(recon, target, reduction='sum')
 
 
 def kl_annealing(step, beta_max=1.0, k=0.001, x0=500):

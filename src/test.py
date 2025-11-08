@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import os
+import random
 from pathlib import Path
 from sklearn.metrics import r2_score
 from scipy.stats import pearsonr
@@ -136,11 +137,18 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
             source_batch, target_batch = batch[0], batch[1]
             target_min_batch = batch[4]
             target_max_batch = batch[5]
+            physical_params = batch[8] if len(batch) > 8 else None
             
             source_batch = source_batch.to(device)
+            physical_params = physical_params.to(device) if physical_params is not None else None
             
             # 前向传播
-            recon, _, _ = model(source_batch, target_mode=target_mode_idx)
+            recon, _, _ = model(source_batch, target_mode=target_mode_idx, physical_params=physical_params)
+            
+            # 调试：检查输出范围
+            if batch_idx == 0:
+                print(f"Recon range: [{recon.min().item():.4f}, {recon.max().item():.4f}]")
+                print(f"Target range: [{target_batch.min().item():.4f}, {target_batch.max().item():.4f}]")
             
             # 转换为numpy
             recon_np = recon.cpu().numpy()
@@ -209,10 +217,22 @@ def main():
     parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     args = parser.parse_args()
     
     device = get_device(args.cpu)
     print(f"Using device: {device}")
+    print(f"Random seed: {args.seed}")
+
+    # 设置随机种子确保数据分割和模型行为一致
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
     
     # 创建模型
     model = CrossModalVAE(
@@ -220,21 +240,34 @@ def main():
         hidden_channels=args.hidden_channels,
         latent_dim=args.latent_dim,
         image_size=(60, 60),
-        num_modes=3
+        num_modes=3,
+        use_physical_prior=False,  # 与训练时保持一致
+        physical_dim=7
     ).to(device)
     
     # 加载检查点
     checkpoint_path = os.path.join(
         args.checkpoint_dir,
-        f'vae_{args.source_mode}2{args.target_mode}_best.pt'
+        f'vae_{args.source_mode}2{args.target_mode}_best_seed{args.seed}.pt'
     )
-    
+
+    # 向后兼容旧的未带seed命名
+    if not os.path.exists(checkpoint_path):
+        checkpoint_path_old = os.path.join(
+            args.checkpoint_dir,
+            f'vae_{args.source_mode}2{args.target_mode}_best.pt'
+        )
+        if os.path.exists(checkpoint_path_old):
+            checkpoint_path = checkpoint_path_old
+            print(f"Warning: Using old checkpoint format (without seed). Consider retraining with --seed {args.seed}")
+
     if not os.path.exists(checkpoint_path):
         print(f"Error: Checkpoint not found at {checkpoint_path}")
         return
     
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    # 允许非严格加载，避免键不匹配导致报错
+    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
     print(f"Loaded checkpoint from: {checkpoint_path}")
     
     # 加载测试数据
@@ -257,7 +290,8 @@ def main():
         batch_size=args.batch_size,
         target_size=3600,
         resize_shape=(60, 60),
-        out_channels=1
+        out_channels=1,
+        seed=args.seed
     )
     
     print(f"Test dataset size: {len(test_loader.dataset)}")

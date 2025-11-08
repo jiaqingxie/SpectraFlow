@@ -6,8 +6,14 @@
 
 首先需要将原始CSV文件处理成3600个点的格式：
 
+#### 方式1: 使用默认路径
 ```bash
 python src/process.py
+```
+
+#### 方式2: 指定原始数据路径（推荐）
+```bash
+python src/process.py --data_dir /mnt/shared-storage-user/xiejiaqing/data/qm9s
 ```
 
 这会处理以下三个数据集：
@@ -15,20 +21,31 @@ python src/process.py
 - `uv_boraden.csv` → `data/processed/uv_broaden_processed.csv`
 - `raman_boraden.csv` → `data/processed/raman_broaden_processed.csv`
 
-**注意**: 确保原始CSV文件在 `E:\SpectraViT\` 目录下。
+**参数说明**:
+- `--data_dir`: 指定原始CSV文件所在目录（默认：`/mnt/shared-storage-user/xiejiaqing/data/qm9s`）
+- `--output_dir`: 指定处理后的数据保存目录（默认：`data/processed`）
 
 ### 步骤2: 训练模型
 
-#### 基本训练命令
+#### 方式1: 从已处理的数据训练（推荐）
 
 ```bash
 python src/train.py
 ```
 
+#### 方式2: 自动处理数据并训练（一步到位）
+
+```bash
+python src/train.py --raw_data_dir /mnt/shared-storage-user/xiejiaqing/data/qm9s
+```
+
+这会自动调用 `process.py` 处理数据，然后开始训练。
+
 #### 完整参数示例
 
 ```bash
 python src/train.py \
+    --raw_data_dir /mnt/shared-storage-user/xiejiaqing/data/qm9s \
     --data_dir data/processed \
     --epochs 50 \
     --batch_size 32 \
@@ -44,6 +61,7 @@ python src/train.py \
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
+| `--raw_data_dir` | `None` | 原始CSV文件目录（提供此参数会自动预处理） |
 | `--data_dir` | `data/processed` | 处理后的数据目录 |
 | `--epochs` | `20` | 训练轮数 |
 | `--batch_size` | `32` | 批次大小 |
@@ -132,5 +150,6 @@ A: 目前代码不支持断点续训，但可以加载已保存的模型继续�
 处理后的数据：
 - 每个光谱统一为3600个点
 - 转换为热图格式 (60x60) 用于训练
+
 
 
