@@ -462,3 +462,4 @@ class ConditionalFlowMatching1D(nn.Module):
             return x, path
         return x
 
+

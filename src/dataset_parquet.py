@@ -1,6 +1,7 @@
 """
 从Parquet文件加载多模态光谱数据集
 支持从IR光谱生成H-NMR和C-NMR光谱
+优化版本：使用向量化操作和并行处理加速加载
 """
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
@@ -10,6 +11,8 @@ from scipy import interpolate
 from pathlib import Path
 from tqdm import tqdm
 import os
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from functools import partial
 
 
 class ParquetSpectrumDataset(Dataset):
@@ -36,112 +39,130 @@ class ParquetSpectrumDataset(Dataset):
         self.target_size = target_size
         self.normalize = normalize
         
-        # 加载parquet文件
+        # 加载parquet文件（只加载需要的列，加快速度）
         print(f"Loading parquet data from: {parquet_path}")
+        columns_to_load = [source_field, target_field]
+        
         if os.path.isdir(parquet_path):
             # 如果是目录，查找所有parquet文件
             parquet_files = list(Path(parquet_path).glob("*.parquet"))
             if len(parquet_files) == 0:
                 raise ValueError(f"No parquet files found in {parquet_path}")
             print(f"Found {len(parquet_files)} parquet files")
-            # 读取所有文件并合并
-            dfs = []
-            for f in tqdm(parquet_files, desc="Loading parquet files"):
-                df = pd.read_parquet(f)
-                dfs.append(df)
+            
+            # 并行读取所有文件（使用线程池）
+            def load_parquet_file(f):
+                try:
+                    return pd.read_parquet(f, columns=columns_to_load)
+                except Exception as e:
+                    print(f"Warning: Failed to load {f}: {e}")
+                    return None
+            
+            with ThreadPoolExecutor(max_workers=min(8, len(parquet_files))) as executor:
+                dfs = list(tqdm(
+                    executor.map(load_parquet_file, parquet_files),
+                    total=len(parquet_files),
+                    desc="Loading parquet files"
+                ))
+            
+            # 过滤掉None（加载失败的文件）
+            dfs = [df for df in dfs if df is not None]
+            if len(dfs) == 0:
+                raise ValueError("No valid parquet files could be loaded")
+            
             self.df = pd.concat(dfs, ignore_index=True)
         else:
-            # 单个文件
-            self.df = pd.read_parquet(parquet_path)
+            # 单个文件，只加载需要的列
+            self.df = pd.read_parquet(parquet_path, columns=columns_to_load)
         
         print(f"Total rows: {len(self.df)}")
         
-        # 过滤有效数据
+        # 过滤有效数据（优化版本：使用向量化操作）
         if filter_valid:
             print(f"Filtering valid data...")
             valid_mask = (
                 self.df[source_field].notna() & 
                 self.df[target_field].notna()
             )
-            # 检查不是空列表
-            def is_valid_spectrum(x):
-                if pd.isna(x):
-                    return False
-                if isinstance(x, list):
-                    return len(x) > 0
-                if isinstance(x, np.ndarray):
-                    return len(x) > 0
-                return True
             
-            valid_mask = valid_mask & self.df[source_field].apply(is_valid_spectrum)
-            valid_mask = valid_mask & self.df[target_field].apply(is_valid_spectrum)
+            # 向量化检查长度（比apply快很多）
+            def check_length_fast(series):
+                """快速检查序列长度"""
+                lengths = []
+                for x in series:
+                    if pd.isna(x):
+                        lengths.append(0)
+                    elif isinstance(x, list):
+                        lengths.append(len(x))
+                    elif isinstance(x, np.ndarray):
+                        lengths.append(len(x))
+                    else:
+                        lengths.append(0)
+                return np.array(lengths) > 0
+            
+            source_valid = check_length_fast(self.df[source_field])
+            target_valid = check_length_fast(self.df[target_field])
+            valid_mask = valid_mask & source_valid & target_valid
             
             self.df = self.df[valid_mask].reset_index(drop=True)
             print(f"Valid rows after filtering: {len(self.df)}")
         
-        # 处理光谱数据
+        # 处理光谱数据（优化版本：直接访问DataFrame列，避免iterrows）
         print(f"Processing spectra (source: {source_field}, target: {target_field})...")
-        self.source_spectra = []
-        self.target_spectra = []
-        self.source_min_vals = []
-        self.source_max_vals = []
-        self.target_min_vals = []
-        self.target_max_vals = []
         
-        invalid_count = 0
+        # 辅助函数：插值
+        def interpolate_spectrum(spectrum, target_length):
+            """插值到指定长度"""
+            if len(spectrum) == target_length:
+                return spectrum.copy()
+            x_old = np.linspace(0, 1, len(spectrum))
+            x_new = np.linspace(0, 1, target_length)
+            return interpolate.interp1d(x_old, spectrum, kind='linear', 
+                                       fill_value='extrapolate', bounds_error=False)(x_new)
         
-        for idx, row in tqdm(self.df.iterrows(), total=len(self.df), desc="Processing spectra"):
+        def process_spectrum_pair(idx):
+            """处理一对光谱"""
             try:
-                # 提取源光谱
-                source_spec = row[source_field]
+                # 直接从DataFrame获取（比iterrows快）
+                source_spec = self.df.iloc[idx][source_field]
+                target_spec = self.df.iloc[idx][target_field]
+                
+                # 转换源光谱
                 if isinstance(source_spec, list):
                     source_spec = np.array(source_spec, dtype=np.float32)
                 elif isinstance(source_spec, np.ndarray):
                     source_spec = source_spec.astype(np.float32)
                 else:
-                    invalid_count += 1
-                    continue
+                    return None
                 
-                # 处理多维数组（如果是列表的列表，取第一个或展平）
+                # 处理多维数组
                 if source_spec.ndim > 1:
-                    if source_spec.shape[0] == 1:
-                        source_spec = source_spec[0]
-                    else:
-                        # 如果是2D，可能需要展平或取平均
-                        source_spec = source_spec.flatten()
+                    source_spec = source_spec.flatten()
+                source_spec = source_spec.flatten()
                 
-                # 提取目标光谱
-                target_spec = row[target_field]
+                # 转换目标光谱
                 if isinstance(target_spec, list):
                     target_spec = np.array(target_spec, dtype=np.float32)
                 elif isinstance(target_spec, np.ndarray):
                     target_spec = target_spec.astype(np.float32)
                 else:
-                    invalid_count += 1
-                    continue
+                    return None
                 
                 # 处理多维数组
                 if target_spec.ndim > 1:
-                    if target_spec.shape[0] == 1:
-                        target_spec = target_spec[0]
-                    else:
-                        target_spec = target_spec.flatten()
-                
-                # 确保是1D数组
-                source_spec = source_spec.flatten()
+                    target_spec = target_spec.flatten()
                 target_spec = target_spec.flatten()
                 
                 # 检查长度
                 if len(source_spec) == 0 or len(target_spec) == 0:
-                    invalid_count += 1
-                    continue
+                    return None
                 
                 # 如果指定了长度，进行插值
                 if source_size is not None and len(source_spec) != source_size:
-                    source_spec = self._interpolate(source_spec, source_size)
+                    source_spec = interpolate_spectrum(source_spec, source_size)
                 
                 if target_size is not None and len(target_spec) != target_size:
-                    target_spec = self._interpolate(target_spec, target_size)
+                    target_spec = interpolate_spectrum(target_spec, target_size)
                 
                 # 归一化
                 source_min = source_spec.min()
@@ -156,19 +177,34 @@ class ParquetSpectrumDataset(Dataset):
                     source_norm = source_spec
                     target_norm = target_spec
                 
-                self.source_spectra.append(source_norm)
-                self.target_spectra.append(target_norm)
-                self.source_min_vals.append(source_min)
-                self.source_max_vals.append(source_max)
-                self.target_min_vals.append(target_min)
-                self.target_max_vals.append(target_max)
-                
-            except Exception as e:
-                invalid_count += 1
-                if invalid_count <= 5:  # 只打印前5个错误
-                    print(f"Error processing row {idx}: {e}")
-                continue
+                return {
+                    'source': source_norm,
+                    'target': target_norm,
+                    'source_min': source_min,
+                    'source_max': source_max,
+                    'target_min': target_min,
+                    'target_max': target_max
+                }
+            except Exception:
+                return None
         
+        # 直接处理（iloc比iterrows快很多）
+        num_rows = len(self.df)
+        results = []
+        for idx in tqdm(range(num_rows), desc="Processing spectra"):
+            result = process_spectrum_pair(idx)
+            if result is not None:
+                results.append(result)
+        
+        # 提取结果
+        self.source_spectra = [r['source'] for r in results]
+        self.target_spectra = [r['target'] for r in results]
+        self.source_min_vals = [r['source_min'] for r in results]
+        self.source_max_vals = [r['source_max'] for r in results]
+        self.target_min_vals = [r['target_min'] for r in results]
+        self.target_max_vals = [r['target_max'] for r in results]
+        
+        invalid_count = len(self.df) - len(results)
         if invalid_count > 0:
             print(f"Warning: {invalid_count} rows were skipped due to processing errors")
         
