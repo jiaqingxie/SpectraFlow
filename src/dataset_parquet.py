@@ -90,13 +90,18 @@ class ParquetSpectrumDataset(Dataset):
                 """快速检查序列长度"""
                 lengths = []
                 for x in series:
-                    if pd.isna(x):
+                    # 检查是否为NaN（需要先检查是否是标量）
+                    if isinstance(x, (list, np.ndarray)):
+                        # 如果是列表或数组，检查长度
+                        if isinstance(x, list):
+                            lengths.append(len(x))
+                        else:  # np.ndarray
+                            lengths.append(len(x))
+                    elif pd.isna(x):
+                        # 标量且为NaN
                         lengths.append(0)
-                    elif isinstance(x, list):
-                        lengths.append(len(x))
-                    elif isinstance(x, np.ndarray):
-                        lengths.append(len(x))
                     else:
+                        # 其他类型（可能是标量但不可迭代）
                         lengths.append(0)
                 return np.array(lengths) > 0
             
