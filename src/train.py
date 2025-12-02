@@ -30,8 +30,10 @@ class PairedModalDataset(Dataset):
     配对模态数据集
     支持任意两个模态之间的配对
     支持从CSV或HDF5文件加载数据（HDF5更快）
+    支持不同的输入输出长度（source_size和target_size）
     """
-    def __init__(self, source_csv, target_csv, target_size=3600, resize_shape=(60, 60), 
+    def __init__(self, source_csv, target_csv, source_size=None, target_size=None, 
+                 heatmap_size=3600, resize_shape=(60, 60), 
                  out_channels=1, use_h5=True):
         # 优先使用HDF5格式（如果存在且启用）
         source_h5 = source_csv.replace('.csv', '.h5')
@@ -65,23 +67,30 @@ class PairedModalDataset(Dataset):
         assert len(self.source_data) == len(self.target_data), \
             f"Source and target data lengths must match: {len(self.source_data)} vs {len(self.target_data)}"
         
-        self.target_size = target_size
+        # 设置源和目标光谱长度（用于插值）
+        # 如果未指定，使用heatmap_size（保持向后兼容）
+        self.source_size = source_size if source_size is not None else heatmap_size
+        self.target_size = target_size if target_size is not None else heatmap_size
+        
+        # 热图大小（模型输入输出必须是固定大小）
+        self.heatmap_size = heatmap_size
         self.resize_shape = resize_shape
         self.out_channels = out_channels
         
-        # 处理源模态数据
-        self.source_interpolated = [self._interpolate(spec) for spec in self.source_data]
-        self.source_min_vals = [spec.min() for spec in self.source_interpolated]
-        self.source_max_vals = [spec.max() for spec in self.source_interpolated]
+        # 处理源模态数据：先插值到source_size，再插值到heatmap_size用于热图转换
+        self.source_interpolated_original = [self._interpolate(spec, self.source_size) for spec in self.source_data]
+        self.source_interpolated_for_heatmap = [self._interpolate(spec, self.heatmap_size) for spec in self.source_interpolated_original]
+        self.source_min_vals = [spec.min() for spec in self.source_interpolated_for_heatmap]
+        self.source_max_vals = [spec.max() for spec in self.source_interpolated_for_heatmap]
         self.source_heatmaps = [
             self._spectrum_to_heatmap(spec, minv, maxv)
-            for spec, minv, maxv in zip(self.source_interpolated, self.source_min_vals, self.source_max_vals)
+            for spec, minv, maxv in zip(self.source_interpolated_for_heatmap, self.source_min_vals, self.source_max_vals)
         ]
         
-        # 若H5未提供，则离线计算物理参数
+        # 若H5未提供，则离线计算物理参数（基于原始插值后的光谱）
         if getattr(self, 'source_physical_params', None) is None:
             self.source_physical_params = []
-            for spec in self.source_interpolated:
+            for spec in self.source_interpolated_original:
                 params = compute_params(spec)
                 physical_vec = np.array([
                     params.get('mean', 0),
@@ -96,19 +105,22 @@ class PairedModalDataset(Dataset):
                 physical_vec = np.clip(physical_vec, -1e3, 1e3)
                 self.source_physical_params.append(physical_vec)
         
-        # 处理目标模态数据
-        self.target_interpolated = [self._interpolate(spec) for spec in self.target_data]
-        self.target_min_vals = [spec.min() for spec in self.target_interpolated]
-        self.target_max_vals = [spec.max() for spec in self.target_interpolated]
+        # 处理目标模态数据：先插值到target_size，再插值到heatmap_size用于热图转换
+        self.target_interpolated_original = [self._interpolate(spec, self.target_size) for spec in self.target_data]
+        self.target_interpolated_for_heatmap = [self._interpolate(spec, self.heatmap_size) for spec in self.target_interpolated_original]
+        self.target_min_vals = [spec.min() for spec in self.target_interpolated_for_heatmap]
+        self.target_max_vals = [spec.max() for spec in self.target_interpolated_for_heatmap]
         self.target_heatmaps = [
             self._spectrum_to_heatmap(spec, minv, maxv)
-            for spec, minv, maxv in zip(self.target_interpolated, self.target_min_vals, self.target_max_vals)
+            for spec, minv, maxv in zip(self.target_interpolated_for_heatmap, self.target_min_vals, self.target_max_vals)
         ]
     
-    def _interpolate(self, spectrum):
-        """插值到目标长度"""
+    def _interpolate(self, spectrum, target_length):
+        """插值到指定长度"""
+        if len(spectrum) == target_length:
+            return spectrum.copy()
         x_old = np.linspace(0, 1, len(spectrum))
-        x_new = np.linspace(0, 1, self.target_size)
+        x_new = np.linspace(0, 1, target_length)
         return interpolate.interp1d(x_old, spectrum, kind='linear', 
                                    fill_value='extrapolate', bounds_error=False)(x_new)
     
@@ -144,8 +156,8 @@ class PairedModalDataset(Dataset):
             torch.tensor(source_max).float(),
             torch.tensor(target_min).float(),
             torch.tensor(target_max).float(),
-            torch.tensor(self.source_interpolated[idx]).float(),  # 原始光谱用于计算参数
-            torch.tensor(self.target_interpolated[idx]).float(),  # 原始光谱用于计算参数
+            torch.tensor(self.source_interpolated_original[idx]).float(),  # 原始长度的源光谱
+            torch.tensor(self.target_interpolated_original[idx]).float(),  # 原始长度的目标光谱
             torch.tensor(self.source_physical_params[idx]).float(),  # 物理参数
         )
 
@@ -298,12 +310,28 @@ class CrossModalVAETrainer:
         self.train_steps = checkpoint.get('train_steps', 0)
 
 
-def get_paired_loaders(source_csv, target_csv, batch_size=32, target_size=3600, 
-                      resize_shape=(60, 60), out_channels=1, use_h5=True, seed=42):
-    """获取配对数据加载器"""
+def get_paired_loaders(source_csv, target_csv, batch_size=32, source_size=None, target_size=None,
+                      heatmap_size=3600, resize_shape=(60, 60), out_channels=1, use_h5=True, seed=42):
+    """
+    获取配对数据加载器
+    
+    Args:
+        source_csv: 源模态CSV文件路径
+        target_csv: 目标模态CSV文件路径
+        batch_size: 批次大小
+        source_size: 源光谱长度（例如1800），如果为None则使用heatmap_size
+        target_size: 目标光谱长度（例如10000），如果为None则使用heatmap_size
+        heatmap_size: 热图大小（模型输入输出固定大小，默认3600）
+        resize_shape: 热图形状（默认(60, 60)）
+        out_channels: 输出通道数
+        use_h5: 是否使用HDF5格式
+        seed: 随机种子
+    """
     dataset = PairedModalDataset(
         source_csv, target_csv, 
+        source_size=source_size,
         target_size=target_size,
+        heatmap_size=heatmap_size,
         resize_shape=resize_shape,
         out_channels=out_channels,
         use_h5=use_h5
@@ -406,6 +434,12 @@ def main():
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
     parser.add_argument('--modes', nargs='+', default=['ir', 'uv', 'raman'],
                        help='Modalities to train')
+    parser.add_argument('--source_size', type=int, default=None,
+                       help='Source spectrum length (e.g., 1800). If None, use heatmap_size.')
+    parser.add_argument('--target_size', type=int, default=None,
+                       help='Target spectrum length (e.g., 10000). If None, use heatmap_size.')
+    parser.add_argument('--heatmap_size', type=int, default=3600,
+                       help='Heatmap size for model input/output (must be perfect square, default 3600=60x60)')
     args = parser.parse_args()
     
     device = get_device(args.cpu)
@@ -503,7 +537,9 @@ def main():
         train_loader, val_loader, test_loader = get_paired_loaders(
             str(source_csv), str(target_csv),
             batch_size=config.batch_size,
-            target_size=3600,
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
             resize_shape=config.resize_shape,
             out_channels=config.in_channels,
             use_h5=True,  # 启用HDF5优先加载
