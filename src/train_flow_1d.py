@@ -348,7 +348,8 @@ class FlowMatchingTrainer1D:
 
 
 def train_modality_pair(trainer, train_loader, val_loader, source_name, target_name, 
-                       epochs=20, save_dir='checkpoints', val_num_steps=50, seed=42):
+                       epochs=20, save_dir='checkpoints', val_num_steps=50, seed=42,
+                       test_loader=None, test_after_training=False, test_num_steps=100, use_rk4_test=False):
     """训练单个模态对"""
     os.makedirs(save_dir, exist_ok=True)
     best_val_gen_loss = float('inf')
@@ -414,6 +415,45 @@ def train_modality_pair(trainer, train_loader, val_loader, source_name, target_n
             print(f"  -> Saved best model (val_gen_loss: {best_val_gen_loss:.6f})")
     
     print(f"Training completed. Best val gen loss: {best_val_gen_loss:.6f}\n")
+    
+    # 训练结束后在测试集上评估（可选）
+    if test_after_training and test_loader is not None:
+        print(f"\n{'='*60}")
+        print(f"Evaluating on test set...")
+        print(f"{'='*60}")
+        
+        trainer.model.eval()
+        test_losses = []
+        test_gen_losses = []
+        
+        with torch.no_grad():
+            for batch in tqdm(test_loader, desc="Testing"):
+                source_batch, target_batch = batch[0], batch[1]
+                
+                eval_results = trainer.eval_step(
+                    source_batch, target_batch, target_mode=None,
+                    num_steps=test_num_steps, use_rk4=use_rk4_test
+                )
+                test_losses.append(eval_results['loss'])
+                test_gen_losses.append(eval_results['gen_loss'])
+        
+        avg_test_loss = np.mean(test_losses)
+        avg_test_gen_loss = np.mean(test_gen_losses)
+        
+        print(f"\nTest Results:")
+        print(f"  Test Loss: {avg_test_loss:.6f}")
+        print(f"  Test Gen Loss: {avg_test_gen_loss:.6f}")
+        
+        # 保存测试结果
+        test_results_file = os.path.join(save_dir, f'flow_1d_{source_name}2{target_name.replace("_", "-")}_test_results_seed{seed}.txt')
+        with open(test_results_file, 'w') as f:
+            f.write(f"Test Results: {source_name} -> {target_name}\n")
+            f.write(f"{'='*60}\n")
+            f.write(f"Test Loss: {avg_test_loss:.6f}\n")
+            f.write(f"Test Gen Loss: {avg_test_gen_loss:.6f}\n")
+        print(f"  -> Saved test results to {test_results_file}\n")
+    
+    return best_val_gen_loss
 
 
 def main():
@@ -454,6 +494,12 @@ def main():
                        help='Target spectrum length (default: 10000 for NMR)')
     parser.add_argument('--val_num_steps', type=int, default=50,
                        help='Number of ODE steps for validation')
+    parser.add_argument('--test_after_training', action='store_true',
+                       help='Evaluate on test set after training completes')
+    parser.add_argument('--test_num_steps', type=int, default=100,
+                       help='Number of ODE steps for test evaluation')
+    parser.add_argument('--use_rk4_test', action='store_true',
+                       help='Use RK4 method for test evaluation (more accurate but slower)')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility')
     args = parser.parse_args()
@@ -555,7 +601,11 @@ def main():
         epochs=args.epochs,
         save_dir=args.save_dir,
         val_num_steps=args.val_num_steps,
-        seed=args.seed
+        seed=args.seed,
+        test_loader=test_loader,
+        test_after_training=args.test_after_training,
+        test_num_steps=args.test_num_steps,
+        use_rk4_test=args.use_rk4_test
     )
     
     print("Training completed!")
