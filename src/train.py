@@ -504,8 +504,8 @@ def main():
     # 定义所有模态对（双向转换）
     data_dir = Path(args.data_dir)
     mode_pairs = [
-        # ('ir', 'uv'),
-        ('ir', 'raman'),
+        ('ir', 'uv'),
+        # ('ir', 'raman'),
         # ('uv', 'raman'),
         # ('uv', 'ir'),
         # ('ir', 'ir'),
