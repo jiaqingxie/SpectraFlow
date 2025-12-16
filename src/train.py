@@ -507,9 +507,9 @@ def main():
         # ('ir', 'uv'),
         # ('ir', 'raman'),
         # ('uv', 'raman'),
-        # ('uv', 'ir'),
+        ('uv', 'ir'),
         # ('ir', 'ir'),
-        ('raman', 'uv'),
+        # ('raman', 'uv'),
     ]
     
     # 训练每个模态对
