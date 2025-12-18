@@ -507,8 +507,8 @@ def main():
         # ('ir', 'uv'),
         # ('ir', 'raman'),
         # ('uv', 'raman'),
-        ('uv', 'ir'),
-        # ('ir', 'ir'),
+        # ('uv', 'ir'),
+        ('ir', 'ir'),
         # ('raman', 'uv'),
     ]
     
