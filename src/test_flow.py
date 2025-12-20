@@ -555,7 +555,7 @@ def main():
         resize_shape=(60, 60),
         out_channels=1,
         seed=args.seed
-    )
+    )  
     
     print(f"Test dataset size: {len(test_loader.dataset)}")
     
