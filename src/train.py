@@ -508,8 +508,11 @@ def main():
         # ('ir', 'raman'),
         # ('uv', 'raman'),
         # ('uv', 'ir'),
-        ('ir', 'ir'),
+        # ('ir', 'ir'),
+        # ('raman', 'raman'),
+        # ('raman', 'ir'),
         # ('raman', 'uv'),
+        ('uv', 'uv'),
     ]
     
     # 训练每个模态对
