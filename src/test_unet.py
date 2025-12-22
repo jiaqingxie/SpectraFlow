@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from scipy.stats import pearsonr
 
 from train_unet import UNetTranslator
 from train import get_paired_loaders
@@ -30,12 +31,19 @@ def calculate_metrics(original, reconstructed):
     ss_tot = np.sum((original - np.mean(original)) ** 2) + 1e-8
     r2 = 1 - ss_res / ss_tot
 
+    # Pearson correlation coefficient
+    try:
+        pearson, _ = pearsonr(original, reconstructed)
+    except:
+        pearson = np.nan
+
     return {
         "mse": mse,
         "rmse": rmse,
         "mae": mae,
         "mape": mape,
         "r2": r2,
+        "pearson": pearson,
     }
 
 
@@ -123,7 +131,11 @@ def evaluate(model, test_loader, target_mode_idx, device):
         return {}, [], []
 
     keys = all_metrics[0].keys()
-    mean_metrics = {k: float(np.mean([m[k] for m in all_metrics])) for k in keys}
+    mean_metrics = {}
+    for k in keys:
+        values = [m[k] for m in all_metrics]
+        # Use nanmean for metrics that might contain NaN (e.g., pearson)
+        mean_metrics[k] = float(np.nanmean(values))
     return mean_metrics, all_targets, all_preds
 
 
@@ -133,6 +145,8 @@ def main():
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints", help="Directory containing UNet checkpoints")
     parser.add_argument("--source_mode", type=str, required=True, choices=["ir", "uv", "raman"], help="Source modality")
     parser.add_argument("--target_mode", type=str, required=True, choices=["ir", "uv", "raman"], help="Target modality")
+    parser.add_argument("--source_csv", type=str, default=None, help="Custom source CSV filename (optional, overrides default naming)")
+    parser.add_argument("--target_csv", type=str, default=None, help="Custom target CSV filename (optional, overrides default naming)")
     parser.add_argument("--checkpoint_name", type=str, default=None, help="Checkpoint filename (optional)")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for testing")
     parser.add_argument("--hidden_channels", type=int, default=128, help="Hidden channels (must match training)")
@@ -155,8 +169,16 @@ def main():
     print(f"Using device: {device}")
 
     data_dir = Path(args.data_dir)
-    source_csv = data_dir / f"{args.source_mode}_broaden_processed.csv"
-    target_csv = data_dir / f"{args.target_mode}_broaden_processed.csv"
+    # Use custom filenames if provided, otherwise use default naming
+    if args.source_csv:
+        source_csv = Path(args.source_csv) if os.path.isabs(args.source_csv) else data_dir / args.source_csv
+    else:
+        source_csv = data_dir / f"{args.source_mode}_broaden_processed.csv"
+    
+    if args.target_csv:
+        target_csv = Path(args.target_csv) if os.path.isabs(args.target_csv) else data_dir / args.target_csv
+    else:
+        target_csv = data_dir / f"{args.target_mode}_broaden_processed.csv"
 
     if not source_csv.exists() or not target_csv.exists():
         print("Error: data files not found")
@@ -174,8 +196,10 @@ def main():
         resize_shape=tuple(args.resize_shape),
         out_channels=1,
         use_h5=True,
-        seed=args.seed,
+        seed=args.seed,  # Must match training seed for consistent data split
     )
+    print(f"Using seed={args.seed} for data split (must match training seed)")
+    print(f"Test dataset size: {len(test_loader.dataset)}")
 
     # Resolve checkpoint path
     if args.checkpoint_name is not None:
@@ -201,7 +225,10 @@ def main():
     if metrics:
         print("Test metrics:")
         for k, v in metrics.items():
-            print(f"  {k}: {v:.6f}")
+            if np.isnan(v):
+                print(f"  {k}: NaN")
+            else:
+                print(f"  {k}: {v:.6f}")
 
     # Save comparison plot for a few samples
     if targets and preds:
