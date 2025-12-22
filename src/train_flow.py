@@ -292,6 +292,10 @@ def main():
     parser = argparse.ArgumentParser(description='Train Flow Matching Model')
     parser.add_argument('--data_dir', type=str, default='data/processed',
                        help='Directory containing processed CSV files')
+    parser.add_argument('--source_csv', type=str, default=None,
+                       help='Custom source CSV filename (optional, overrides default naming; can be absolute or relative to data_dir)')
+    parser.add_argument('--target_csv', type=str, default=None,
+                       help='Custom target CSV filename (optional, overrides default naming; can be absolute or relative to data_dir)')
     parser.add_argument('--epochs', type=int, default=50, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--learning_rate', type=float, default=4e-4, help='Learning rate (aligned with VAE, more stable)')
@@ -305,6 +309,14 @@ def main():
     parser.add_argument('--target_mode', type=str, required=True,
                        choices=['ir', 'uv', 'raman'],
                        help='Target modality')
+    parser.add_argument('--heatmap_size', type=int, default=3600,
+                       help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
+    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
+                       help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--source_size', type=int, default=None,
+                       help='Optional source spectrum length before heatmap (if None, uses heatmap_size)')
+    parser.add_argument('--target_size', type=int, default=None,
+                       help='Optional target spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--use_mixed_loss', action='store_true',
                        help='Use mixed loss training (velocity loss + generation loss)')
     parser.add_argument('--gen_loss_weight', type=float, default=0.1,
@@ -339,7 +351,7 @@ def main():
         in_channels = 1
         hidden_channels = args.hidden_channels
         num_modes = 3
-        resize_shape = (60, 60)
+        resize_shape = tuple(args.resize_shape)
         learning_rate = args.learning_rate
         epochs = args.epochs
         batch_size = args.batch_size
@@ -352,11 +364,15 @@ def main():
     
     # 加载数据
     data_dir = Path(args.data_dir)
-    source_file = f'{args.source_mode}_broaden_processed.csv'
-    target_file = f'{args.target_mode}_broaden_processed.csv'
-    
-    source_csv = data_dir / source_file
-    target_csv = data_dir / target_file
+    # Use custom filenames if provided, otherwise use default naming
+    if args.source_csv:
+        source_csv = Path(args.source_csv) if os.path.isabs(args.source_csv) else data_dir / args.source_csv
+    else:
+        source_csv = data_dir / f'{args.source_mode}_broaden_processed.csv'
+    if args.target_csv:
+        target_csv = Path(args.target_csv) if os.path.isabs(args.target_csv) else data_dir / args.target_csv
+    else:
+        target_csv = data_dir / f'{args.target_mode}_broaden_processed.csv'
     
     if not source_csv.exists() or not target_csv.exists():
         print(f"Error: Data files not found")
@@ -368,7 +384,9 @@ def main():
     train_loader, val_loader, test_loader = get_paired_loaders(
         str(source_csv), str(target_csv),
         batch_size=config.batch_size,
-        target_size=3600,
+        source_size=args.source_size,
+        target_size=args.target_size,
+        heatmap_size=args.heatmap_size,
         resize_shape=config.resize_shape,
         out_channels=config.in_channels,
         use_h5=True,

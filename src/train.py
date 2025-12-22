@@ -440,6 +440,14 @@ def main():
                        help='Target spectrum length (e.g., 10000). If None, use heatmap_size.')
     parser.add_argument('--heatmap_size', type=int, default=3600,
                        help='Heatmap size for model input/output (must be perfect square, default 3600=60x60)')
+    parser.add_argument('--source_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
+                       help='Optional: train a single modality pair (source). If set, must also set --target_mode.')
+    parser.add_argument('--target_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
+                       help='Optional: train a single modality pair (target). If set, must also set --source_mode.')
+    parser.add_argument('--source_csv', type=str, default=None,
+                       help='Optional: custom source CSV filename (or absolute path). Only used when training a single pair.')
+    parser.add_argument('--target_csv', type=str, default=None,
+                       help='Optional: custom target CSV filename (or absolute path). Only used when training a single pair.')
     args = parser.parse_args()
     
     device = get_device(args.cpu)
@@ -514,19 +522,30 @@ def main():
         # ('raman', 'uv'),
         ('uv', 'uv'),
     ]
+
+    # If a single pair is specified, override mode_pairs
+    if (args.source_mode is not None) or (args.target_mode is not None):
+        if (args.source_mode is None) or (args.target_mode is None):
+            raise ValueError("If using --source_mode/--target_mode, you must set both.")
+        mode_pairs = [(args.source_mode, args.target_mode)]
     
     # 训练每个模态对
     for source_mode, target_mode in mode_pairs:
         # 处理文件名映射（支持HDF5和CSV）
-        source_file = f'{source_mode}_broaden_processed.csv'
-        target_file = f'{target_mode}_broaden_processed.csv'
-        
-        source_csv = data_dir / source_file
-        target_csv = data_dir / target_file
+        # If training a single pair, allow overriding file names via --source_csv/--target_csv
+        if len(mode_pairs) == 1 and args.source_csv:
+            source_csv = Path(args.source_csv) if os.path.isabs(args.source_csv) else (data_dir / args.source_csv)
+        else:
+            source_csv = data_dir / f'{source_mode}_broaden_processed.csv'
+
+        if len(mode_pairs) == 1 and args.target_csv:
+            target_csv = Path(args.target_csv) if os.path.isabs(args.target_csv) else (data_dir / args.target_csv)
+        else:
+            target_csv = data_dir / f'{target_mode}_broaden_processed.csv'
         
         # 检查文件是否存在（优先检查HDF5）
-        source_h5 = data_dir / f'{source_mode}_broaden_processed.h5'
-        target_h5 = data_dir / f'{target_mode}_broaden_processed.h5'
+        source_h5 = Path(str(source_csv).replace('.csv', '.h5'))
+        target_h5 = Path(str(target_csv).replace('.csv', '.h5'))
         
         if os.path.exists(source_h5) and os.path.exists(target_h5):
             # 使用HDF5文件（即使CSV不存在也没关系）

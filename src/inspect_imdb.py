@@ -29,42 +29,33 @@ def inspect_lmdb(file_path):
         import lmdb
         print(f"   ✓ lmdb module imported successfully")
         
-        # LMDB 通常是一个目录，检查路径
-        if file_path.is_file():
-            print(f"   Note: {file_path} is a file, but LMDB expects a directory.")
-            print(f"   Trying parent directory or checking for .lmdb directory...")
-            # 尝试同名的目录（去掉扩展名）
-            lmdb_dir = file_path.parent / file_path.stem
-            if lmdb_dir.exists() and lmdb_dir.is_dir():
-                print(f"   Found directory: {lmdb_dir}")
-                file_path = lmdb_dir
-            else:
-                # 或者尝试直接使用文件所在目录
-                print(f"   Trying to use parent directory: {file_path.parent}")
-                # 检查是否有 data.mdb 或 lock.mdb 文件（LMDB 的标志文件）
-                if (file_path.parent / "data.mdb").exists():
-                    print(f"   Found data.mdb in parent directory, using parent as LMDB root")
-                    file_path = file_path.parent
-                else:
-                    raise ValueError(f"LMDB path should be a directory, but got a file: {file_path}")
-        elif file_path.is_dir():
-            print(f"   ✓ Path is a directory (as expected for LMDB)")
-        else:
-            raise ValueError(f"Path does not exist: {file_path}")
-        
-        print(f"   Opening LMDB at: {file_path}")
-        
-        # 如果是目录，列出内容
-        if file_path.is_dir():
-            print(f"\n   Directory contents:")
-            for item in sorted(file_path.iterdir()):
+        # LMDB 可以是文件（subdir=False）或目录（subdir=True，默认）
+        # 先列出父目录内容，看看有什么
+        parent_dir = file_path.parent
+        print(f"\n   Checking parent directory: {parent_dir}")
+        if parent_dir.exists() and parent_dir.is_dir():
+            print(f"   Contents of {parent_dir}:")
+            for item in sorted(parent_dir.iterdir()):
                 if item.is_file():
                     size = item.stat().st_size / (1024*1024)
                     print(f"     {item.name} ({size:.2f} MB)")
                 else:
                     print(f"     {item.name}/ (directory)")
         
-        env = lmdb.open(str(file_path), readonly=True, lock=False, readahead=False, meminit=False)
+        # 检查路径类型并打开
+        print(f"\n   Opening LMDB at: {file_path}")
+        env = None
+        
+        if file_path.is_file():
+            print(f"   ✓ Path is a file, opening with subdir=False...")
+            env = lmdb.open(str(file_path), subdir=False, readonly=True, lock=False, 
+                           readahead=False, meminit=False, max_readers=256)
+        elif file_path.is_dir():
+            print(f"   ✓ Path is a directory, opening with subdir=True (default)...")
+            env = lmdb.open(str(file_path), readonly=True, lock=False, 
+                           readahead=False, meminit=False, max_readers=256)
+        else:
+            raise ValueError(f"Path does not exist: {file_path}")
         
         print("   ✓ Successfully opened as LMDB file!")
         

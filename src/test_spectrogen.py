@@ -89,6 +89,10 @@ def main():
     parser.add_argument('--checkpoint_name', type=str, default=None)
     parser.add_argument('--source_mode', type=str, required=True, choices=['ir', 'uv', 'raman'])
     parser.add_argument('--target_mode', type=str, required=True, choices=['ir', 'uv', 'raman'])
+    parser.add_argument('--source_csv', type=str, default=None,
+                       help='Custom source CSV filename (optional, overrides default naming)')
+    parser.add_argument('--target_csv', type=str, default=None,
+                       help='Custom target CSV filename (optional, overrides default naming)')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--latent_dim', type=int, default=128)
     parser.add_argument('--hidden_channels', type=int, default=128)
@@ -109,8 +113,16 @@ def main():
     print(f"Using device: {device}")
 
     data_dir = Path(args.data_dir)
-    source_csv = data_dir / f'{args.source_mode}_broaden_processed.csv'
-    target_csv = data_dir / f'{args.target_mode}_broaden_processed.csv'
+    # Use custom filenames if provided, otherwise use default naming
+    if args.source_csv:
+        source_csv = Path(args.source_csv) if os.path.isabs(args.source_csv) else data_dir / args.source_csv
+    else:
+        source_csv = data_dir / f'{args.source_mode}_broaden_processed.csv'
+    
+    if args.target_csv:
+        target_csv = Path(args.target_csv) if os.path.isabs(args.target_csv) else data_dir / args.target_csv
+    else:
+        target_csv = data_dir / f'{args.target_mode}_broaden_processed.csv'
     if not source_csv.exists() or not target_csv.exists():
         print("Error: data files not found")
         print(f"  {source_csv}")
