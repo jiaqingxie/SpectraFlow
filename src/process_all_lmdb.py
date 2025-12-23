@@ -1,12 +1,12 @@
 """
-批量处理多个LMDB数据集：zinc15, peptide, pahs, nist_ir, mols
+批量处理多个LMDB数据集：zinc15, peptide, pahs, nist_ir, mols, peptide_mod, geom
 """
 import os
 from pathlib import Path
 from process_lmdb import process_lmdb_dataset
 
 
-def process_all_datasets(data_root, output_root, datasets=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols'], 
+def process_all_datasets(data_root, output_root, datasets=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols', 'peptide_mod', 'geom'], 
                          target_size=3600, save_h5=True):
     """
     批量处理所有数据集
@@ -88,13 +88,13 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Batch process multiple LMDB datasets')
-    parser.add_argument('--data_root', type=str, required=True,
-                       help='Root directory containing LMDB files')
+    parser.add_argument('--data_root', type=str, default='/mnt/shared-storage-user/xiejiaqing/data/vibench',
+                       help='Root directory containing LMDB files (default: /mnt/shared-storage-user/xiejiaqing/data/vibench)')
     parser.add_argument('--output_root', type=str, required=True,
                        help='Root directory for output processed data')
     parser.add_argument('--datasets', type=str, nargs='+', 
-                       default=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols'],
-                       help='List of dataset names to process (default: zinc15 peptide pahs nist_ir mols)')
+                       default=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols', 'peptide_mod', 'geom'],
+                       help='List of dataset names to process (default: zinc15 peptide pahs nist_ir mols peptide_mod geom)')
     parser.add_argument('--target_size', type=int, default=3600,
                        help='Target spectrum length (default: 3600)')
     parser.add_argument('--no_h5', action='store_true',

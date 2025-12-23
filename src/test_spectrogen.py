@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from scipy.stats import pearsonr
 
 from model import CrossModalVAE
 from train_spectrogen import get_paired_loaders_phys, batch_compute_params
@@ -43,7 +44,12 @@ def calculate_metrics(original, reconstructed):
     ss_res = np.sum((original - reconstructed) ** 2)
     ss_tot = np.sum((original - np.mean(original)) ** 2) + 1e-8
     r2 = 1 - ss_res / ss_tot
-    return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape, "r2": r2}
+    # Pearson相关系数
+    try:
+        pearson, _ = pearsonr(original, reconstructed)
+    except:
+        pearson = np.nan
+    return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape, "r2": r2, "pearson": pearson}
 
 
 def plot_comparison(targets, preds, save_dir, prefix, num_samples=6):
@@ -68,12 +74,12 @@ def plot_comparison(targets, preds, save_dir, prefix, num_samples=6):
     print(f"Saved comparison plot to: {path}")
 
 
-def load_model(ckpt_path, device, in_channels=1, hidden_channels=128, latent_dim=128, num_modes=3):
+def load_model(ckpt_path, device, in_channels=1, hidden_channels=128, latent_dim=128, num_modes=3, image_size=(60, 60)):
     model = CrossModalVAE(
         in_channels=in_channels,
         hidden_channels=hidden_channels,
         latent_dim=latent_dim,
-        image_size=(60, 60),
+        image_size=image_size,
         num_modes=num_modes,
         use_physical_prior=True,
         physical_dim=7,
@@ -98,11 +104,14 @@ def main():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--latent_dim', type=int, default=128)
     parser.add_argument('--hidden_channels', type=int, default=128)
-    parser.add_argument('--heatmap_size', type=int, default=3600)
-    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60])
+    parser.add_argument('--heatmap_size', type=int, default=3600,
+                       help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
+    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
+                       help='Heatmap reshape size, e.g., 60 60 or 32 32')
     parser.add_argument('--no_split', action='store_true',
                        help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
-                            'If --source_csv/--target_csv is provided, this is enabled automatically.')
+                            'Note: For qm9s dataset, split is always used unless this flag is set. '
+                            'For other datasets, if --source_csv/--target_csv is provided, full dataset is used by default.')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cpu', action='store_true')
     parser.add_argument('--results_dir', type=str, default='results')
@@ -135,7 +144,23 @@ def main():
         return
 
     # 创建测试数据加载器
-    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    # For qm9s dataset, always use split (even if source_csv/target_csv provided)
+    # For other datasets, use full dataset if source_csv/target_csv provided (unless --no_split is explicitly set)
+    is_qm9s = False
+    if 'qm9s' in str(args.data_dir).lower():
+        is_qm9s = True
+    elif args.source_csv and 'qm9' in str(args.source_csv).lower():
+        is_qm9s = True
+    elif args.target_csv and 'qm9' in str(args.target_csv).lower():
+        is_qm9s = True
+    
+    # For qm9s, always split unless --no_split is explicitly set
+    # For others, use full dataset if CSV files provided (unless --no_split is explicitly set)
+    if is_qm9s:
+        use_full_as_test = args.no_split  # qm9s: only use full if explicitly --no_split
+    else:
+        use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    
     if use_full_as_test:
         # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
         dataset = PairedModalDataset(
@@ -178,6 +203,7 @@ def main():
         hidden_channels=args.hidden_channels,
         latent_dim=args.latent_dim,
         num_modes=3,
+        image_size=tuple(args.resize_shape),
     )
     target_mode_idx = {'ir': 0, 'uv': 1, 'raman': 2}[args.target_mode]
 

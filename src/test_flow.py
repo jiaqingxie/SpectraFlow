@@ -490,7 +490,8 @@ def main():
                        help='Optional target spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--no_split', action='store_true',
                        help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
-                            'If --source_csv/--target_csv is provided, this is enabled automatically.')
+                            'Note: For qm9s dataset, split is always used unless this flag is set. '
+                            'For other datasets, if --source_csv/--target_csv is provided, full dataset is used by default.')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
     parser.add_argument('--num_steps', type=int, default=150, help='Number of ODE steps (default: 150, more steps = better quality)')
     parser.add_argument('--use_rk4', action='store_true', help='Use RK4 ODE solver (more accurate but slower, default: True)')
@@ -568,7 +569,23 @@ def main():
         return
     
     # 创建测试数据加载器
-    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    # For qm9s dataset, always use split (even if source_csv/target_csv provided)
+    # For other datasets, use full dataset if source_csv/target_csv provided (unless --no_split is explicitly set)
+    is_qm9s = False
+    if 'qm9s' in str(args.data_dir).lower():
+        is_qm9s = True
+    elif args.source_csv and 'qm9' in str(args.source_csv).lower():
+        is_qm9s = True
+    elif args.target_csv and 'qm9' in str(args.target_csv).lower():
+        is_qm9s = True
+    
+    # For qm9s, always split unless --no_split is explicitly set
+    # For others, use full dataset if CSV files provided (unless --no_split is explicitly set)
+    if is_qm9s:
+        use_full_as_test = args.no_split  # qm9s: only use full if explicitly --no_split
+    else:
+        use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    
     if use_full_as_test:
         # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
         dataset = PairedModalDataset(

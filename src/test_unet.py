@@ -151,13 +151,16 @@ def main():
     parser.add_argument("--checkpoint_name", type=str, default=None, help="Checkpoint filename (optional)")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for testing")
     parser.add_argument("--hidden_channels", type=int, default=128, help="Hidden channels (must match training)")
-    parser.add_argument("--heatmap_size", type=int, default=3600, help="Heatmap size")
-    parser.add_argument("--resize_shape", type=int, nargs=2, default=[60, 60], help="Heatmap reshape size")
+    parser.add_argument("--heatmap_size", type=int, default=3600,
+                       help="Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)")
+    parser.add_argument("--resize_shape", type=int, nargs=2, default=[60, 60],
+                       help="Heatmap reshape size, e.g., 60 60 or 32 32")
     parser.add_argument("--source_size", type=int, default=None, help="Optional source spectrum length before heatmap")
     parser.add_argument("--target_size", type=int, default=None, help="Optional target spectrum length before heatmap")
     parser.add_argument("--no_split", action="store_true",
                        help="Do not split dataset; treat the whole provided CSV/H5 as the test set. "
-                            "If --source_csv/--target_csv is provided, this is enabled automatically.")
+                            "Note: For qm9s dataset, split is always used unless this flag is set. "
+                            "For other datasets, if --source_csv/--target_csv is provided, full dataset is used by default.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--cpu", action="store_true", help="Force CPU")
     parser.add_argument("--results_dir", type=str, default="results", help="Directory to save plots")
@@ -191,7 +194,23 @@ def main():
         return
 
     # 创建测试数据加载器
-    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    # For qm9s dataset, always use split (even if source_csv/target_csv provided)
+    # For other datasets, use full dataset if source_csv/target_csv provided (unless --no_split is explicitly set)
+    is_qm9s = False
+    if 'qm9s' in str(args.data_dir).lower():
+        is_qm9s = True
+    elif args.source_csv and 'qm9' in str(args.source_csv).lower():
+        is_qm9s = True
+    elif args.target_csv and 'qm9' in str(args.target_csv).lower():
+        is_qm9s = True
+    
+    # For qm9s, always split unless --no_split is explicitly set
+    # For others, use full dataset if CSV files provided (unless --no_split is explicitly set)
+    if is_qm9s:
+        use_full_as_test = args.no_split  # qm9s: only use full if explicitly --no_split
+    else:
+        use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    
     if use_full_as_test:
         # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
         dataset = PairedModalDataset(
