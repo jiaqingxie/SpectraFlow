@@ -267,7 +267,10 @@ def main():
     parser.add_argument('--latent_dim', type=int, default=128)
     parser.add_argument('--hidden_channels', type=int, default=128)
     parser.add_argument('--beta_max', type=float, default=0.001)
-    parser.add_argument('--save_dir', type=str, default='checkpoints')
+    parser.add_argument('--save_dir', type=str, default='checkpoints', help='Checkpoint directory (base)')
+    parser.add_argument('--no_dataset_subdir', action='store_true',
+                        help='Do not auto-create a dataset-specific subdirectory under save_dir (default: False). '
+                             'By default, if --data_dir path contains "qm9s", checkpoints will be saved under save_dir/qm9s/.')
     parser.add_argument('--source_mode', type=str, required=True, choices=['ir', 'uv', 'raman'])
     parser.add_argument('--target_mode', type=str, required=True, choices=['ir', 'uv', 'raman'])
     parser.add_argument('--source_csv', type=str, default=None,
@@ -279,6 +282,12 @@ def main():
     parser.add_argument('--cpu', action='store_true')
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
+
+    # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
+    # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
+    if (not args.no_dataset_subdir) and ('qm9s' in str(args.data_dir).lower()):
+        args.save_dir = os.path.join(args.save_dir, 'qm9s')
+        print(f"[save_dir] Detected qm9s dataset. Saving checkpoints to: {args.save_dir}")
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)

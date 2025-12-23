@@ -1,0 +1,326 @@
+---
+alwaysApply: true
+---
+
+num_steps=num_steps,
+                    use_rk4=use_rk4,
+                    return_path=False
+                )
+            else:
+                # 使用Flow Matching生成（不返回路径）
+                generated = model.sample(
+                    source_batch,
+                    target_mode=target_mode_idx,
+                    num_steps=num_steps,
+                    use_rk4=use_rk4,
+                    return_path=False
+                )
+            
+            # 转换为numpy
+            gen_np = generated.cpu().numpy()
+            target_np = target_batch.numpy()
+            
+            # 将热图转换回光谱
+            for i in range(gen_np.shape[0]):
+                gen_heatmap = gen_np[i, 0]  # (H, W)
+                target_heatmap = target_np[i, 0]
+                
+                spec_min = float(target_min_batch[i])
+                spec_max = float(target_max_batch[i])
+                
+                # 转换回1D光谱
+                gen_spec = inverse_heatmap_to_spectrum(gen_heatmap, spec_min, spec_max)
+                target_spec = inverse_heatmap_to_spectrum(target_heatmap, spec_min, spec_max)
+                
+                # 计算指标
+                metrics = calculate_metrics(target_spec, gen_spec)
+                for key in all_metrics:
+                    if not np.isnan(metrics[key]):
+                        all_metrics[key].append(metrics[key])
+                
+                # 保存前几个样本用于可视化
+                if len(original_spectra) < 5:
+                    original_spectra.append(target_spec)
+                    generated_spectra.append(gen_spec)
+            
+            # 更新进度条，显示当前R²分数（如果有的话）
+            if len(all_metrics['r2']) > 0:
+                current_r2 = np.mean(all_metrics['r2'])
+                pbar.set_postfix({'R²': f"{current_r2:.4f}", 'samples': len(all_metrics['r2'])})
+            else:
+                pbar.set_postfix({'samples': len(all_metrics['mse'])})
+    
+    # 打印平均指标
+    print(f"\n{'='*60}")
+    print(f"Test Results (Flow Matching): {source_mode} -> {target_mode}")
+    print(f"{'='*60}")
+    print(f"MSE:      {np.mean(all_metrics['mse']):.6e} ± {np.std(all_metrics['mse']):.6e}")
+    print(f"RMSE:     {np.mean(all_metrics['rmse']):.6e} ± {np.std(all_metrics['rmse']):.6e}")
+    print(f"MAE:      {np.mean(all_metrics['mae']):.6e} ± {np.std(all_metrics['mae']):.6e}")
+    print(f"MAPE:     {np.mean(all_metrics['mape']):.4f}% ± {np.std(all_metrics['mape']):.4f}%")
+    print(f"R²:       {np.mean(all_metrics['r2']):.6f} ± {np.std(all_metrics['r2']):.6f}")
+    print(f"Pearson:  {np.mean(all_metrics['pearson']):.6f} ± {np.std(all_metrics['pearson']):.6f}")
+    
+    # 绘制对比图
+    if len(original_spectra) > 0:
+        plot_comparison(
+            original_spectra, generated_spectra,
+            save_dir, 'flow',
+            source_mode, target_mode,
+            num_samples=min(5, len(original_spectra))
+        )
+    
+    # 绘制Flow Matching过程可视化
+    if len(source_heatmaps_for_flow) > 0:
+        plot_flow_process(
+            source_heatmaps_for_flow,
+            target_heatmaps_for_flow,
+            path_heatmaps_list,
+            save_dir,
+            source_mode,
+            target_mode,
+            num_samples=min(6, len(source_heatmaps_for_flow)),
+            num_steps_show=5,
+            target_min_list=target_min_list_for_flow if len(target_min_list_for_flow) > 0 else None,
+            target_max_list=target_max_list_for_flow if len(target_max_list_for_flow) > 0 else None
+        )
+    
+    return all_metrics
+
+
+def generate_process_only(model, test_loader, source_mode, target_mode, device, 
+                          save_dir='results', num_steps=150, use_rk4=True):
+    """
+    快速生成Flow Matching过程可视化（只处理6个样本，不运行完整测试）
+    """
+    model.eval()
+    
+    mode_map = {'ir': 0, 'uv': 1, 'raman': 2}
+    target_mode_idx = mode_map[target_mode]
+    
+    source_heatmaps_for_flow = []
+    target_heatmaps_for_flow = []
+    path_heatmaps_list = []
+    target_min_list_for_flow = []
+    target_max_list_for_flow = []
+    
+    print(f"Generating flow process visualization: {source_mode} -> {target_mode}")
+    
+    with torch.no_grad():
+        for batch_idx, batch in enumerate(test_loader):
+            if len(source_heatmaps_for_flow) >= 6:
+                break
+                
+            source_batch, target_batch = batch[0], batch[1]
+            target_min_batch = batch[4]
+            target_max_batch = batch[5]
+            
+            source_batch = source_batch.to(device)
+            
+            # 只处理需要的样本数
+            batch_size_collect = min(6 - len(source_heatmaps_for_flow), source_batch.size(0))
+            source_batch_collect = source_batch[:batch_size_collect]
+            
+            # 使用Flow Matching生成，并获取完整路径
+            generated, path = model.sample(
+                source_batch_collect,
+                target_mode=target_mode_idx,
+                num_steps=num_steps,
+                use_rk4=use_rk4,
+                return_path=True
+            )
+            
+            # 处理路径数据
+            path_np = [p.cpu().numpy() for p in path]
+            
+            for i in range(batch_size_collect):
+                source_hm = source_batch_collect[i, 0].cpu().numpy()  # (H, W)
+                target_hm = target_batch[i, 0].numpy()  # (H, W)
+                path_hms = [p[i, 0] for p in path_np]  # List of (H, W)
+                spec_min = float(target_min_batch[i])
+                spec_max = float(target_max_batch[i])
+                
+                source_heatmaps_for_flow.append(source_hm)
+                target_heatmaps_for_flow.append(target_hm)
+                path_heatmaps_list.append(path_hms)
+                target_min_list_for_flow.append(spec_min)
+                target_max_list_for_flow.append(spec_max)
+    
+    # 绘制Flow Matching过程可视化
+    if len(source_heatmaps_for_flow) > 0:
+        plot_flow_process(
+            source_heatmaps_for_flow,
+            target_heatmaps_for_flow,
+            path_heatmaps_list,
+            save_dir,
+            source_mode,
+            target_mode,
+            num_samples=min(6, len(source_heatmaps_for_flow)),
+            num_steps_show=5,
+            target_min_list=target_min_list_for_flow,
+            target_max_list=target_max_list_for_flow
+        )
+        print(f"Process visualization generated successfully!")
+    else:
+        print("Error: No samples collected for visualization")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Test Flow Matching Model')
+    parser.add_argument('--data_dir', type=str, default='data/processed',
+                       help='Directory containing processed CSV files')
+    parser.add_argument('--checkpoint_dir', type=str, default='checkpoints',
+                       help='Directory containing model checkpoints')
+    parser.add_argument('--source_mode', type=str, required=True,
+                       choices=['ir', 'uv', 'raman'],
+                       help='Source modality')
+    parser.add_argument('--target_mode', type=str, required=True,
+                       choices=['ir', 'uv', 'raman'],
+                       help='Target modality')
+    parser.add_argument('--source_csv', type=str, default=None,
+                       help='Custom source CSV filename (optional, overrides default naming)')
+    parser.add_argument('--target_csv', type=str, default=None,
+                       help='Custom target CSV filename (optional, overrides default naming)')
+    parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+    parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
+    parser.add_argument('--heatmap_size', type=int, default=3600,
+                       help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
+    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
+                       help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--source_size', type=int, default=None,
+                       help='Optional source spectrum length before heatmap (if None, uses heatmap_size)')
+    parser.add_argument('--target_size', type=int, default=None,
+                       help='Optional target spectrum length before heatmap (if None, uses heatmap_size)')
+    parser.add_argument('--no_split', action='store_true',
+                       help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
+                            'If --source_csv/--target_csv is provided, this is enabled automatically.')
+    parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
+    parser.add_argument('--num_steps', type=int, default=150, help='Number of ODE steps (default: 150, more steps = better quality)')
+    parser.add_argument('--use_rk4', action='store_true', help='Use RK4 ODE solver (more accurate but slower, default: True)')
+    parser.add_argument('--no_rk4', action='store_true', help='Disable RK4 and use Euler method (faster but less accurate)')
+    parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
+    parser.add_argument('--seed', type=int, default=42,
+                       help='Random seed for reproducibility (default: 42)')
+    parser.add_argument('--process_only', action='store_true',
+                       help='Only generate process visualization (fast, no full test)')
+    args = parser.parse_args()
+    
+    # 设置随机种子以确保结果可复现
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    
+    device = get_device(args.cpu)
+    print(f"Using device: {device}")
+    print(f"Random seed: {args.seed}")
+    
+    # 创建模型（2D架构）
+    model = ConditionalFlowMatching(
+        in_channels=1,
+        hidden_channels=args.hidden_channels,
+        num_modes=3,
+        image_size=tuple(args.resize_shape),
+        sigma_min=0.01
+    ).to(device)
+    
+    # 加载检查点（支持带seed和不带seed的文件名）
+    checkpoint_path = os.path.join(
+        args.checkpoint_dir,
+        f'flow_{args.source_mode}2{args.target_mode}_best_seed{args.seed}.pt'
+    )
+    
+    # 如果带seed的文件不存在，尝试加载不带seed的文件（向后兼容）
+    if not os.path.exists(checkpoint_path):
+        checkpoint_path_old = os.path.join(
+            args.checkpoint_dir,
+            f'flow_{args.source_mode}2{args.target_mode}_best.pt'
+        )
+        if os.path.exists(checkpoint_path_old):
+            checkpoint_path = checkpoint_path_old
+            print(f"Warning: Using old checkpoint format (without seed). Consider retraining with --seed {args.seed}")
+    
+    if not os.path.exists(checkpoint_path):
+        print(f"Error: Checkpoint not found at {checkpoint_path}")
+        return
+    
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    print(f"Loaded checkpoint from: {checkpoint_path}")
+    
+    # 加载测试数据
+    data_dir = Path(args.data_dir)
+    # Use custom filenames if provided, otherwise use default naming
+    if args.source_csv:
+        source_csv = Path(args.source_csv) if os.path.isabs(args.source_csv) else data_dir / args.source_csv
+    else:
+        source_csv = data_dir / f'{args.source_mode}_broaden_processed.csv'
+    
+    if args.target_csv:
+        target_csv = Path(args.target_csv) if os.path.isabs(args.target_csv) else data_dir / args.target_csv
+    else:
+        target_csv = data_dir / f'{args.target_mode}_broaden_processed.csv'
+    
+    if not source_csv.exists() or not target_csv.exists():
+        print(f"Error: Data files not found")
+        print(f"Source: {source_csv}")
+        print(f"Target: {target_csv}")
+        return
+    
+    # 创建测试数据加载器
+    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    if use_full_as_test:
+        # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
+        dataset = PairedModalDataset(
+            str(source_csv), str(target_csv),
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            use_h5=True
+        )
+        test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+        print("Data split: using FULL dataset as test (no random_split).")
+    else:
+        _, _, test_loader = get_paired_loaders(
+            str(source_csv), str(target_csv),
+            batch_size=args.batch_size,
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            seed=args.seed
+        )
+        print("Data split: using random_split(test subset) to match training split.")
+    
+    print(f"Test dataset size: {len(test_loader.dataset)}")
+    
+    # 确定是否使用RK4（默认True，使用RK4获得更准确的结果）
+    # 如果指定了--no_rk4，则使用Euler；否则默认使用RK4（也可以通过--use_rk4显式指定）
+    use_rk4 = not args.no_rk4  # 默认True，除非指定--no_rk4
+    
+    # 如果只生成process图，跳过完整测试
+    if args.process_only:
+        generate_process_only(
+            model, test_loader,
+            args.source_mode, args.target_mode,
+            device, args.save_dir, args.num_steps, use_rk4
+        )
+        print("\nProcess visualization completed!")
+    else:
+        # 完整测试
+        metrics = test_modality_pair(
+            model, test_loader,
+            args.source_mode, args.target_mode,
+            device, args.save_dir, args.num_steps, use_rk4
+        )
+        print("\nTesting completed!")
+
+
+if __name__ == '__main__':
+    main()

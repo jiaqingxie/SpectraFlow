@@ -429,7 +429,10 @@ def main():
     parser.add_argument('--beta_max', type=float, default=0.001, help='Max KL weight')
     parser.add_argument('--latent_dim', type=int, default=128, help='Latent dimension')
     parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
-    parser.add_argument('--save_dir', type=str, default='checkpoints', help='Checkpoint directory')
+    parser.add_argument('--save_dir', type=str, default='checkpoints', help='Checkpoint directory (base)')
+    parser.add_argument('--no_dataset_subdir', action='store_true',
+                       help='Do not auto-create a dataset-specific subdirectory under save_dir (default: False). '
+                            'By default, if --data_dir path contains "qm9s", checkpoints will be saved under save_dir/qm9s/.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
     parser.add_argument('--modes', nargs='+', default=['ir', 'uv', 'raman'],
@@ -449,6 +452,12 @@ def main():
     parser.add_argument('--target_csv', type=str, default=None,
                        help='Optional: custom target CSV filename (or absolute path). Only used when training a single pair.')
     args = parser.parse_args()
+
+    # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
+    # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
+    if (not args.no_dataset_subdir) and ('qm9s' in str(args.data_dir).lower()):
+        args.save_dir = os.path.join(args.save_dir, 'qm9s')
+        print(f"[save_dir] Detected qm9s dataset. Saving checkpoints to: {args.save_dir}")
     
     device = get_device(args.cpu)
     print(f"Using device: {device}")
