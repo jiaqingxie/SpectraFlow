@@ -220,6 +220,9 @@ def main():
     parser.add_argument('--latent_dim', type=int, default=128, help='Latent dimension')
     parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
+    parser.add_argument('--no_split', action='store_true',
+                       help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
+                            'If --source_csv/--target_csv is provided, this is enabled automatically.')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     args = parser.parse_args()
@@ -294,14 +297,30 @@ def main():
         return
     
     # 创建测试数据加载器
-    _, _, test_loader = get_paired_loaders(
-        str(source_csv), str(target_csv),
-        batch_size=args.batch_size,
-        target_size=3600,
-        resize_shape=(60, 60),
-        out_channels=1,
-        seed=args.seed
-    )
+    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    if use_full_as_test:
+        # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
+        dataset = PairedModalDataset(
+            str(source_csv), str(target_csv),
+            source_size=None,
+            target_size=3600,
+            heatmap_size=3600,
+            resize_shape=(60, 60),
+            out_channels=1,
+            use_h5=True
+        )
+        test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+        print("Data split: using FULL dataset as test (no random_split).")
+    else:
+        _, _, test_loader = get_paired_loaders(
+            str(source_csv), str(target_csv),
+            batch_size=args.batch_size,
+            target_size=3600,
+            resize_shape=(60, 60),
+            out_channels=1,
+            seed=args.seed
+        )
+        print("Data split: using random_split(test subset) to match training split.")
     
     print(f"Test dataset size: {len(test_loader.dataset)}")
     

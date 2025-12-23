@@ -443,6 +443,8 @@ def main():
                        help='Target spectrum length (e.g., 10000). If None, use heatmap_size.')
     parser.add_argument('--heatmap_size', type=int, default=3600,
                        help='Heatmap size for model input/output (must be perfect square, default 3600=60x60)')
+    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
+                       help='Heatmap reshape size, e.g., 60 60 or 32 32')
     parser.add_argument('--source_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
                        help='Optional: train a single modality pair (source). If set, must also set --target_mode.')
     parser.add_argument('--target_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
@@ -455,7 +457,17 @@ def main():
 
     # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
     # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
-    if (not args.no_dataset_subdir) and ('qm9s' in str(args.data_dir).lower()):
+    # Check both data_dir and source/target CSV paths for 'qm9s'
+    is_qm9s = False
+    if not args.no_dataset_subdir:
+        if 'qm9s' in str(args.data_dir).lower():
+            is_qm9s = True
+        elif args.source_csv and 'qm9' in str(args.source_csv).lower():
+            is_qm9s = True
+        elif args.target_csv and 'qm9' in str(args.target_csv).lower():
+            is_qm9s = True
+    
+    if is_qm9s:
         args.save_dir = os.path.join(args.save_dir, 'qm9s')
         print(f"[save_dir] Detected qm9s dataset. Saving checkpoints to: {args.save_dir}")
     
@@ -479,7 +491,7 @@ def main():
         hidden_channels = args.hidden_channels
         latent_dim = args.latent_dim
         num_modes = 3
-        resize_shape = (60, 60)
+        resize_shape = tuple(args.resize_shape)
         learning_rate = args.learning_rate
         beta_max = args.beta_max
         batch_size = args.batch_size

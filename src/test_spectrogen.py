@@ -12,6 +12,8 @@ import torch
 
 from model import CrossModalVAE
 from train_spectrogen import get_paired_loaders_phys, batch_compute_params
+from train import PairedModalDataset
+from torch.utils.data import DataLoader
 from utils import inverse_heatmap_to_spectrum, get_device, reconstruction_loss
 
 
@@ -98,6 +100,9 @@ def main():
     parser.add_argument('--hidden_channels', type=int, default=128)
     parser.add_argument('--heatmap_size', type=int, default=3600)
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60])
+    parser.add_argument('--no_split', action='store_true',
+                       help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
+                            'If --source_csv/--target_csv is provided, this is enabled automatically.')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cpu', action='store_true')
     parser.add_argument('--results_dir', type=str, default='results')
@@ -129,15 +134,34 @@ def main():
         print(f"  {target_csv}")
         return
 
-    _, _, test_loader = get_paired_loaders_phys(
-        str(source_csv),
-        str(target_csv),
-        batch_size=args.batch_size,
-        heatmap_size=args.heatmap_size,
-        resize_shape=tuple(args.resize_shape),
-        out_channels=1,
-        seed=args.seed,
-    )
+    # 创建测试数据加载器
+    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    if use_full_as_test:
+        # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
+        dataset = PairedModalDataset(
+            str(source_csv), str(target_csv),
+            source_size=None,
+            target_size=None,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            use_h5=True
+        )
+        test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+        print("Data split: using FULL dataset as test (no random_split).")
+    else:
+        _, _, test_loader = get_paired_loaders_phys(
+            str(source_csv),
+            str(target_csv),
+            batch_size=args.batch_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            seed=args.seed,
+        )
+        print(f"Data split: using random_split(test subset) to match training split (seed={args.seed}).")
+    
+    print(f"Test dataset size: {len(test_loader.dataset)}")
 
     if args.checkpoint_name:
         ckpt_path = Path(args.checkpoint_dir) / args.checkpoint_name

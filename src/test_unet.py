@@ -12,7 +12,8 @@ import torch
 from scipy.stats import pearsonr
 
 from train_unet import UNetTranslator
-from train import get_paired_loaders
+from train import get_paired_loaders, PairedModalDataset
+from torch.utils.data import DataLoader
 from utils import inverse_heatmap_to_spectrum, get_device
 
 
@@ -154,6 +155,9 @@ def main():
     parser.add_argument("--resize_shape", type=int, nargs=2, default=[60, 60], help="Heatmap reshape size")
     parser.add_argument("--source_size", type=int, default=None, help="Optional source spectrum length before heatmap")
     parser.add_argument("--target_size", type=int, default=None, help="Optional target spectrum length before heatmap")
+    parser.add_argument("--no_split", action="store_true",
+                       help="Do not split dataset; treat the whole provided CSV/H5 as the test set. "
+                            "If --source_csv/--target_csv is provided, this is enabled automatically.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--cpu", action="store_true", help="Force CPU")
     parser.add_argument("--results_dir", type=str, default="results", help="Directory to save plots")
@@ -186,19 +190,36 @@ def main():
         print(f"  {target_csv}")
         return
 
-    train_loader, val_loader, test_loader = get_paired_loaders(
-        str(source_csv),
-        str(target_csv),
-        batch_size=args.batch_size,
-        source_size=args.source_size,
-        target_size=args.target_size,
-        heatmap_size=args.heatmap_size,
-        resize_shape=tuple(args.resize_shape),
-        out_channels=1,
-        use_h5=True,
-        seed=args.seed,  # Must match training seed for consistent data split
-    )
-    print(f"Using seed={args.seed} for data split (must match training seed)")
+    # 创建测试数据加载器
+    use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
+    if use_full_as_test:
+        # When user provides explicit CSVs (often already "test split"), do NOT random-split again.
+        dataset = PairedModalDataset(
+            str(source_csv), str(target_csv),
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            use_h5=True
+        )
+        test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+        print("Data split: using FULL dataset as test (no random_split).")
+    else:
+        _, _, test_loader = get_paired_loaders(
+            str(source_csv),
+            str(target_csv),
+            batch_size=args.batch_size,
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=tuple(args.resize_shape),
+            out_channels=1,
+            use_h5=True,
+            seed=args.seed,  # Must match training seed for consistent data split
+        )
+        print(f"Data split: using random_split(test subset) to match training split (seed={args.seed}).")
+    
     print(f"Test dataset size: {len(test_loader.dataset)}")
 
     # Resolve checkpoint path

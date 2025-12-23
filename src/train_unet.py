@@ -262,8 +262,10 @@ def main():
                         help='Custom source CSV filename (optional, overrides default naming)')
     parser.add_argument('--target_csv', type=str, default=None,
                         help='Custom target CSV filename (optional, overrides default naming)')
-    parser.add_argument('--heatmap_size', type=int, default=3600, help='Heatmap size (perfect square, e.g., 3600=60x60)')
-    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60], help='Resize shape for heatmaps')
+    parser.add_argument('--heatmap_size', type=int, default=3600,
+                       help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
+    parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
+                       help='Heatmap reshape size, e.g., 60 60 or 32 32')
     parser.add_argument('--source_size', type=int, default=None, help='Optional source spectrum length before heatmap')
     parser.add_argument('--target_size', type=int, default=None, help='Optional target spectrum length before heatmap')
     parser.add_argument('--cpu', action='store_true', help='Force CPU')
@@ -272,7 +274,17 @@ def main():
 
     # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
     # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
-    if (not args.no_dataset_subdir) and ('qm9s' in str(args.data_dir).lower()):
+    # Check both data_dir and source/target CSV paths for 'qm9s'
+    is_qm9s = False
+    if not args.no_dataset_subdir:
+        if 'qm9s' in str(args.data_dir).lower():
+            is_qm9s = True
+        elif args.source_csv and 'qm9' in str(args.source_csv).lower():
+            is_qm9s = True
+        elif args.target_csv and 'qm9' in str(args.target_csv).lower():
+            is_qm9s = True
+    
+    if is_qm9s:
         args.save_dir = os.path.join(args.save_dir, 'qm9s')
         print(f"[save_dir] Detected qm9s dataset. Saving checkpoints to: {args.save_dir}")
 
