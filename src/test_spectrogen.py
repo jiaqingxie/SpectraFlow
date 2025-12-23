@@ -244,10 +244,35 @@ def main():
 
     if all_metrics:
         keys = all_metrics[0].keys()
-        mean_metrics = {k: float(np.mean([m[k] for m in all_metrics])) for k in keys}
-        print("Test metrics (mean over test set):")
-        for k, v in mean_metrics.items():
-            print(f"  {k}: {v:.6f}")
+        # Filter out NaN values when calculating mean
+        mean_metrics = {}
+        std_metrics = {}
+        for k in keys:
+            values = [m[k] for m in all_metrics if not np.isnan(m[k])]
+            if values:
+                mean_metrics[k] = float(np.mean(values))
+                std_metrics[k] = float(np.std(values))
+            else:
+                mean_metrics[k] = np.nan
+                std_metrics[k] = np.nan
+        
+        print("\n" + "=" * 60)
+        print(f"Test Results (SpectroGen): {args.source_mode} -> {args.target_mode}")
+        print("=" * 60)
+        # Print metrics in a specific order
+        metric_order = ['mse', 'rmse', 'mae', 'mape', 'r2', 'pearson', 'recon_loss']
+        for k in metric_order:
+            if k in mean_metrics and not np.isnan(mean_metrics[k]):
+                if k == 'mape':
+                    print(f"{k.upper():8s}: {mean_metrics[k]:.4f}% ± {std_metrics[k]:.4f}%")
+                elif k == 'recon_loss':
+                    print(f"{k.upper():8s}: {mean_metrics[k]:.6e} ± {std_metrics[k]:.6e}")
+                else:
+                    print(f"{k.upper():8s}: {mean_metrics[k]:.6f} ± {std_metrics[k]:.6f}")
+        # Print any other metrics not in the order list
+        for k in sorted(keys):
+            if k not in metric_order and not np.isnan(mean_metrics[k]):
+                print(f"{k.upper():8s}: {mean_metrics[k]:.6f} ± {std_metrics[k]:.6f}")
 
     if all_targets and all_preds:
         plot_comparison(
