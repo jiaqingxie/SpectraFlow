@@ -45,7 +45,8 @@ def process_all_datasets(data_root, output_root, datasets=['zinc15', 'peptide', 
         
         found = False
         for lmdb_path in possible_paths:
-            if lmdb_path.exists() and lmdb_path.is_file():
+            # LMDB可以是文件或目录
+            if lmdb_path.exists() and (lmdb_path.is_file() or lmdb_path.is_dir()):
                 lmdb_paths.append(lmdb_path)
                 found = True
         
@@ -93,7 +94,7 @@ def main():
     parser.add_argument('--output_root', type=str, required=True,
                        help='Root directory for output processed data')
     parser.add_argument('--datasets', type=str, nargs='+', 
-                       default=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols', 'peptide_mod', 'geom'],
+                       default=['zinc15', 'peptide', 'pahs', 'nist_ir', 'mols', 'peptide_mod', 'geom', 'qm9'],
                        help='List of dataset names to process (default: zinc15 peptide pahs nist_ir mols peptide_mod geom)')
     parser.add_argument('--target_size', type=int, default=3600,
                        help='Target spectrum length (default: 3600)')

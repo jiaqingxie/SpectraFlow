@@ -117,23 +117,70 @@ def process_lmdb_dataset(lmdb_path, output_dir, dataset_name, target_size=3600, 
         target_size: 目标光谱长度，默认3600
         save_h5: 是否保存HDF5格式
     """
-    # 检查LMDB文件是否存在
-    if not os.path.isfile(lmdb_path):
-        raise FileNotFoundError(f"LMDB file not found: {lmdb_path}")
+    # 检查LMDB路径是否存在
+    lmdb_path_obj = Path(lmdb_path)
+    if not lmdb_path_obj.exists():
+        raise FileNotFoundError(f"LMDB path not found: {lmdb_path}")
     
     print(f"\nProcessing LMDB: {lmdb_path}")
     print(f"Dataset: {dataset_name}")
+    print(f"Path type: {'Directory' if lmdb_path_obj.is_dir() else 'File'}")
     
-    # 打开LMDB
-    env = lmdb.open(
-        lmdb_path,
-        subdir=False,
-        readonly=True,
-        lock=False,
-        readahead=False,
-        meminit=False,
-        max_readers=256
-    )
+    # 打开LMDB（LMDB可能是文件或目录）
+    # 先尝试作为文件打开（subdir=False）
+    try:
+        if lmdb_path_obj.is_file():
+            env = lmdb.open(
+                str(lmdb_path),
+                subdir=False,
+                readonly=True,
+                lock=False,
+                readahead=False,
+                meminit=False,
+                max_readers=256
+            )
+        elif lmdb_path_obj.is_dir():
+            # 如果是目录，尝试作为目录打开
+            env = lmdb.open(
+                str(lmdb_path),
+                subdir=True,
+                readonly=True,
+                lock=False,
+                readahead=False,
+                meminit=False,
+                max_readers=256
+            )
+        else:
+            raise ValueError(f"LMDB path is neither a file nor a directory: {lmdb_path}")
+    except Exception as e:
+        error_msg = str(e)
+        if "No such device" in error_msg or "Invalid argument" in error_msg:
+            # 如果作为文件打开失败，尝试作为目录打开
+            print(f"  ⚠ Warning: Failed to open as file, trying as directory...")
+            try:
+                env = lmdb.open(
+                    str(lmdb_path),
+                    subdir=True,
+                    readonly=True,
+                    lock=False,
+                    readahead=False,
+                    meminit=False,
+                    max_readers=256
+                )
+                print(f"  ✓ Successfully opened as directory")
+            except Exception as e2:
+                raise RuntimeError(
+                    f"Failed to open LMDB at {lmdb_path}.\n"
+                    f"Error as file: {error_msg}\n"
+                    f"Error as directory: {str(e2)}\n"
+                    f"Please check:\n"
+                    f"  1. File/directory exists and is accessible\n"
+                    f"  2. File permissions are correct\n"
+                    f"  3. If on network storage, ensure it's properly mounted\n"
+                    f"  4. LMDB database is not corrupted"
+                ) from e2
+        else:
+            raise
     
     # 获取所有keys
     with env.begin() as txn:
@@ -328,7 +375,6 @@ def process_lmdb_dataset(lmdb_path, output_dir, dataset_name, target_size=3600, 
             print(f"  Saved HDF5: {raman_h5}")
         
         print(f"  Shape: {raman_spectra.shape}")
-        print(f"  Y-axis range (after interpolation): [{raman_spectra.min():.2f}, {raman_spectra.max():.2f}]")
         if original_raman_lengths:
             print(f"  Original data statistics:")
             print(f"    Length - Min: {min(original_raman_lengths)}, Max: {max(original_raman_lengths)}, Mean: {np.mean(original_raman_lengths):.1f}")
@@ -362,7 +408,6 @@ def process_lmdb_dataset(lmdb_path, output_dir, dataset_name, target_size=3600, 
             print(f"  Saved HDF5: {ir_h5}")
         
         print(f"  Shape: {ir_spectra.shape}")
-        print(f"  Y-axis range (after interpolation): [{ir_spectra.min():.2f}, {ir_spectra.max():.2f}]")
         if original_ir_lengths:
             print(f"  Original data statistics:")
             print(f"    Length - Min: {min(original_ir_lengths)}, Max: {max(original_ir_lengths)}, Mean: {np.mean(original_ir_lengths):.1f}")
