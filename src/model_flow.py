@@ -1,10 +1,14 @@
 """
 Flow Matching模型定义：用于跨模态光谱转换
 基于Continuous Normalizing Flows (CNF) 和Conditional Flow Matching (CFM)
-使用2D U-Net架构，在多个层级注入时间和模态嵌入（FiLM机制）
+支持两种骨干网络：
+  - backbone='unet': 2D U-Net架构，在多个层级注入FiLM条件
+  - backbone='dit' : Diffusion Transformer (DiT)，使用adaptive LayerNorm (adaLN)条件
 """
+import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 
@@ -225,27 +229,488 @@ class VelocityFieldNetwork(nn.Module):
         return velocity
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DiT backbone
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DiTBlock(nn.Module):
+    """
+    DiT Transformer Block with adaptive Layer Norm (adaLN) conditioning.
+
+    Condition vector c modulates each sub-layer via:
+        scale, shift, gate  (predicted by a small MLP from c)
+    which is equivalent to FiLM + gating, matching the original DiT paper.
+    """
+    def __init__(self, hidden_dim: int, num_heads: int, mlp_ratio: float = 4.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(hidden_dim, elementwise_affine=False, eps=1e-6)
+        self.attn  = nn.MultiheadAttention(hidden_dim, num_heads, batch_first=True)
+        self.norm2 = nn.LayerNorm(hidden_dim, elementwise_affine=False, eps=1e-6)
+
+        mlp_hidden = int(hidden_dim * mlp_ratio)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, mlp_hidden),
+            nn.GELU(),
+            nn.Linear(mlp_hidden, hidden_dim),
+        )
+
+        # 每个块预测 6 个 adaLN 参数：shift_sa, scale_sa, gate_sa,
+        #                              shift_mlp, scale_mlp, gate_mlp
+        self.adaLN = nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(hidden_dim, 6 * hidden_dim),
+        )
+        # 零初始化输出端（更稳定的训练起点）
+        nn.init.zeros_(self.adaLN[-1].weight)
+        nn.init.zeros_(self.adaLN[-1].bias)
+
+    def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: token序列 (B, N, D)
+            c: 条件嵌入  (B, D)
+        Returns:
+            x: (B, N, D)
+        """
+        params = self.adaLN(c)                    # (B, 6*D)
+        (shift_sa, scale_sa, gate_sa,
+         shift_mlp, scale_mlp, gate_mlp) = params.chunk(6, dim=-1)  # each (B, D)
+
+        # Self-attention sub-layer
+        h = self.norm1(x)
+        h = h * (1 + scale_sa.unsqueeze(1)) + shift_sa.unsqueeze(1)
+        attn_out, _ = self.attn(h, h, h)
+        x = x + gate_sa.unsqueeze(1) * attn_out
+
+        # MLP sub-layer
+        h = self.norm2(x)
+        h = h * (1 + scale_mlp.unsqueeze(1)) + shift_mlp.unsqueeze(1)
+        x = x + gate_mlp.unsqueeze(1) * self.mlp(h)
+
+        return x
+
+
+class DiTVelocityFieldNetwork(nn.Module):
+    """
+    Diffusion Transformer (DiT) 速度场网络。
+
+    流程：
+        1. Patchify：Conv2d with stride=patch_size → (B, N, hidden_dim) token序列
+        2. 加可学习位置编码
+        3. 计算条件嵌入 c = Emb_t(t) + Emb_m(m) + Enc(x0)
+        4. 经过 depth 个 DiTBlock（每块以 c 做 adaLN 调制）
+        5. Final norm + linear → 重组回 (B, C, H, W) 速度场
+
+    参数与 VelocityFieldNetwork 完全兼容（共享相同的外部接口）。
+    """
+    def __init__(
+        self,
+        in_channels: int = 1,
+        hidden_channels: int = 128,   # 对应 U-Net 的 hidden_channels，DiT 用作 condition_dim
+        num_modes: int = 3,
+        image_size: tuple = (60, 60),
+        patch_size: int = 4,
+        dit_hidden_dim: int = 256,    # Transformer 隐藏维度
+        depth: int = 6,               # DiT 块数量
+        num_heads: int = 4,           # 注意力头数
+        mlp_ratio: float = 4.0,
+    ):
+        super().__init__()
+        self.in_channels   = in_channels
+        self.patch_size    = patch_size
+        self.image_size    = image_size
+        self.dit_hidden_dim = dit_hidden_dim
+
+        H, W = image_size
+        assert H % patch_size == 0 and W % patch_size == 0, \
+            f"image_size {image_size} must be divisible by patch_size {patch_size}"
+        self.num_patches_h = H // patch_size
+        self.num_patches_w = W // patch_size
+        self.num_patches   = self.num_patches_h * self.num_patches_w
+        patch_dim          = in_channels * patch_size * patch_size  # 输出 patch 的像素数
+
+        # ── 条件嵌入（与 U-Net 版完全相同） ──────────────────────────────
+        time_dim = dit_hidden_dim
+        self.time_embed = nn.Sequential(
+            SinusoidalPositionalEmbedding(time_dim),
+            nn.Linear(time_dim, time_dim),
+            nn.SiLU(),
+            nn.Linear(time_dim, time_dim),
+        )
+        self.mode_embed = nn.Embedding(num_modes, time_dim)
+        self.condition_encoder = nn.Sequential(
+            nn.Conv2d(in_channels, hidden_channels, 3, padding=1),
+            nn.GroupNorm(8, hidden_channels),
+            nn.SiLU(),
+            nn.AdaptiveAvgPool2d((4, 4)),
+            nn.Flatten(),
+            nn.Linear(hidden_channels * 16, time_dim),
+            nn.SiLU(),
+        )
+
+        # ── Patch Embedding ────────────────────────────────────────────────
+        # x_t: (B, C, H, W) → (B, N, dit_hidden_dim)
+        self.patch_embed = nn.Sequential(
+            nn.Conv2d(in_channels, dit_hidden_dim,
+                      kernel_size=patch_size, stride=patch_size),  # (B, D, nh, nw)
+        )
+        # 可学习位置编码 (1, N, D)
+        self.pos_embed = nn.Parameter(
+            torch.zeros(1, self.num_patches, dit_hidden_dim)
+        )
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+
+        # ── Transformer Blocks ─────────────────────────────────────────────
+        self.blocks = nn.ModuleList([
+            DiTBlock(dit_hidden_dim, num_heads, mlp_ratio)
+            for _ in range(depth)
+        ])
+
+        # ── 最终输出层 ────────────────────────────────────────────────────
+        self.final_norm = nn.LayerNorm(dit_hidden_dim, elementwise_affine=False, eps=1e-6)
+        # adaLN for final norm
+        self.final_adaLN = nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(dit_hidden_dim, 2 * dit_hidden_dim),
+        )
+        nn.init.zeros_(self.final_adaLN[-1].weight)
+        nn.init.zeros_(self.final_adaLN[-1].bias)
+
+        # 输出 projection: D → patch_dim，然后 unpatchify
+        self.out_proj = nn.Linear(dit_hidden_dim, patch_dim)
+        nn.init.zeros_(self.out_proj.weight)
+        nn.init.zeros_(self.out_proj.bias)
+
+    # ──────────────────────────────────────────────────────────────────────
+    def _patchify(self, x: torch.Tensor) -> torch.Tensor:
+        """(B, C, H, W) → (B, N, D)"""
+        x = self.patch_embed(x)               # (B, D, nh, nw)
+        B, D, nh, nw = x.shape
+        x = x.flatten(2).transpose(1, 2)      # (B, N, D)
+        return x
+
+    def _unpatchify(self, x: torch.Tensor) -> torch.Tensor:
+        """(B, N, patch_dim) → (B, C, H, W)"""
+        B, N, _ = x.shape
+        p = self.patch_size
+        C = self.in_channels
+        nh, nw = self.num_patches_h, self.num_patches_w
+
+        # x: (B, N, C*p*p)
+        x = x.reshape(B, nh, nw, C, p, p)
+        # → (B, C, nh, p, nw, p) → (B, C, H, W)
+        x = x.permute(0, 3, 1, 4, 2, 5).contiguous()
+        x = x.reshape(B, C, nh * p, nw * p)
+        return x
+
+    def _build_condition(self, x: torch.Tensor,
+                         t: torch.Tensor,
+                         condition: torch.Tensor | None,
+                         target_mode) -> torch.Tensor:
+        """与 VelocityFieldNetwork 完全相同的条件嵌入构建逻辑"""
+        t_emb = self.time_embed(t)              # (B, D)
+
+        if target_mode is not None:
+            if isinstance(target_mode, (int,)):
+                target_mode_tensor = torch.full(
+                    (x.size(0),), target_mode, dtype=torch.long, device=x.device)
+            elif isinstance(target_mode, torch.Tensor):
+                target_mode_tensor = target_mode.long().to(x.device)
+            else:
+                target_mode_tensor = torch.tensor(
+                    target_mode, dtype=torch.long, device=x.device)
+            mode_emb = self.mode_embed(target_mode_tensor)   # (B, D)
+        else:
+            mode_emb = torch.zeros_like(t_emb)
+
+        if condition is not None:
+            x0_emb = self.condition_encoder(condition)       # (B, D)
+            c = t_emb + mode_emb + x0_emb
+        else:
+            c = t_emb + mode_emb
+        return c                                              # (B, D)
+
+    def forward(self, x: torch.Tensor, t: torch.Tensor,
+                condition=None, target_mode=None) -> torch.Tensor:
+        """
+        Args:
+            x: 当前状态 (B, C, H, W)
+            t: 时间步   (B,)
+            condition: 源光谱热图 (B, C, H, W)，可 None
+            target_mode: 目标模态索引
+        Returns:
+            velocity: 速度场 (B, C, H, W)
+        """
+        # 1. 条件嵌入
+        c = self._build_condition(x, t, condition, target_mode)   # (B, D)
+
+        # 2. Patchify + 位置编码
+        tokens = self._patchify(x) + self.pos_embed               # (B, N, D)
+
+        # 3. DiT Blocks
+        for blk in self.blocks:
+            tokens = blk(tokens, c)
+
+        # 4. Final adaLN
+        shift, scale = self.final_adaLN(c).chunk(2, dim=-1)       # (B, D) each
+        tokens = self.final_norm(tokens)
+        tokens = tokens * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
+
+        # 5. Output projection + Unpatchify
+        tokens = self.out_proj(tokens)                             # (B, N, C*p*p)
+        velocity = self._unpatchify(tokens)                        # (B, C, H, W)
+        return velocity
+
+
+def get_1d_sincos_pos_embed(num_patches: int, embed_dim: int) -> torch.Tensor:
+    """Fixed 1D sin/cos position embedding, returned as (1, N, D)."""
+    pos = torch.arange(num_patches, dtype=torch.float32)
+    half = embed_dim // 2
+    omega = torch.arange(half, dtype=torch.float32) / max(half, 1)
+    omega = 1.0 / (10000 ** omega)
+    out = torch.einsum("n,d->nd", pos, omega)
+    emb = torch.cat([torch.sin(out), torch.cos(out)], dim=1)
+    if embed_dim % 2:
+        emb = F.pad(emb, (0, 1))
+    return emb.unsqueeze(0)
+
+
+class SourceEncoder1D(nn.Module):
+    """Global source-spectrum encoder for VibraDiT conditioning."""
+    def __init__(self, hidden_size: int):
+        super().__init__()
+        mid = max(hidden_size // 2, 64)
+        self.net = nn.Sequential(
+            nn.Conv1d(1, mid, kernel_size=7, padding=3),
+            nn.SiLU(),
+            nn.Conv1d(mid, hidden_size, kernel_size=7, padding=3),
+            nn.SiLU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+        self.proj = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.SiLU(),
+            nn.Linear(hidden_size, hidden_size),
+        )
+
+    def forward(self, x_source: torch.Tensor) -> torch.Tensor:
+        h = self.net(x_source.unsqueeze(1))
+        return self.proj(h)
+
+
+class PatchEmbed1D(nn.Module):
+    """Patchify a flattened 1D spectrum with Conv1d projection."""
+    def __init__(self, seq_len: int, patch_size: int, in_chans: int, embed_dim: int):
+        super().__init__()
+        self.seq_len = seq_len
+        self.patch_size = patch_size
+        self.num_patches = math.ceil(seq_len / patch_size)
+        self.padded_len = self.num_patches * patch_size
+        self.pad_len = self.padded_len - seq_len
+        self.proj = nn.Conv1d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.pad_len > 0:
+            x = F.pad(x, (0, self.pad_len), mode="constant", value=0.0)
+        x = self.proj(x)
+        return x.transpose(1, 2)
+
+
+def modulate_tokens(x: torch.Tensor, shift: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
+    return x * (1 + scale[:, None, :]) + shift[:, None, :]
+
+
+class VibraDiTBlock(nn.Module):
+    """1D DiT block with adaLN-Zero conditioning."""
+    def __init__(self, hidden_size: int, num_heads: int, mlp_ratio: float = 4.0, dropout: float = 0.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.attn = nn.MultiheadAttention(hidden_size, num_heads, dropout=dropout, batch_first=True)
+        self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        mlp_hidden = int(hidden_size * mlp_ratio)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_size, mlp_hidden),
+            nn.GELU(approximate="tanh"),
+            nn.Dropout(dropout),
+            nn.Linear(mlp_hidden, hidden_size),
+            nn.Dropout(dropout),
+        )
+        self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size))
+        nn.init.zeros_(self.adaLN_modulation[-1].weight)
+        nn.init.zeros_(self.adaLN_modulation[-1].bias)
+
+    def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
+        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
+        h = modulate_tokens(self.norm1(x), shift_msa, scale_msa)
+        attn_out, _ = self.attn(h, h, h, need_weights=False)
+        x = x + gate_msa[:, None, :] * attn_out
+        h = modulate_tokens(self.norm2(x), shift_mlp, scale_mlp)
+        x = x + gate_mlp[:, None, :] * self.mlp(h)
+        return x
+
+
+class VibraDiTFinalLayer(nn.Module):
+    """Final 1D DiT layer: tokens to velocity patches."""
+    def __init__(self, hidden_size: int, patch_size: int):
+        super().__init__()
+        self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 2 * hidden_size))
+        self.linear = nn.Linear(hidden_size, patch_size)
+        nn.init.zeros_(self.adaLN_modulation[-1].weight)
+        nn.init.zeros_(self.adaLN_modulation[-1].bias)
+        nn.init.zeros_(self.linear.weight)
+        nn.init.zeros_(self.linear.bias)
+
+    def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
+        shift, scale = self.adaLN_modulation(c).chunk(2, dim=1)
+        x = modulate_tokens(self.norm_final(x), shift, scale)
+        return self.linear(x)
+
+
+class VibraDiTVelocityFieldNetwork(nn.Module):
+    """
+    Wavenumber-aware 1D DiT velocity field adapted from vibradit_flow.py.
+
+    The public interface stays compatible with the existing 2D Flow pipeline:
+    inputs are heatmaps (B, C, H, W), flattened internally into spectra, then
+    reshaped back to the original heatmap layout.
+    """
+    def __init__(
+        self,
+        in_channels: int = 1,
+        num_modes: int = 3,
+        image_size: tuple = (60, 60),
+        patch_size: int = 16,
+        hidden_size: int = 384,
+        depth: int = 8,
+        num_heads: int = 6,
+        mlp_ratio: float = 4.0,
+        dropout: float = 0.0,
+    ):
+        super().__init__()
+        if in_channels != 1:
+            raise ValueError("VibraDiT backbone currently expects in_channels=1.")
+
+        self.in_channels = in_channels
+        self.image_size = image_size
+        self.seq_len = int(image_size[0] * image_size[1])
+        self.patch_size = patch_size
+
+        self.x_embedder = PatchEmbed1D(self.seq_len, patch_size, in_chans=2, embed_dim=hidden_size)
+        self.num_patches = self.x_embedder.num_patches
+        self.register_buffer(
+            "pos_embed",
+            get_1d_sincos_pos_embed(self.num_patches, hidden_size),
+            persistent=False,
+        )
+
+        self.time_embed = nn.Sequential(
+            SinusoidalPositionalEmbedding(hidden_size),
+            nn.Linear(hidden_size, hidden_size),
+            nn.SiLU(),
+            nn.Linear(hidden_size, hidden_size),
+        )
+        self.mode_embed = nn.Embedding(num_modes, hidden_size)
+        self.source_encoder = SourceEncoder1D(hidden_size)
+        self.cond_fuse = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, hidden_size))
+
+        self.blocks = nn.ModuleList([
+            VibraDiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio, dropout=dropout)
+            for _ in range(depth)
+        ])
+        self.final_layer = VibraDiTFinalLayer(hidden_size, patch_size)
+
+    def _target_mode_tensor(self, x: torch.Tensor, target_mode) -> torch.Tensor:
+        if target_mode is None:
+            return torch.zeros((x.size(0),), dtype=torch.long, device=x.device)
+        if isinstance(target_mode, int):
+            return torch.full((x.size(0),), target_mode, dtype=torch.long, device=x.device)
+        if isinstance(target_mode, torch.Tensor):
+            return target_mode.long().to(x.device)
+        return torch.tensor(target_mode, dtype=torch.long, device=x.device)
+
+    def forward(self, x: torch.Tensor, t: torch.Tensor, condition=None, target_mode=None) -> torch.Tensor:
+        if x.ndim != 4:
+            raise ValueError("VibraDiT backbone expects x with shape (B, C, H, W).")
+        if condition is None:
+            condition = x
+
+        batch_size = x.size(0)
+        original_shape = x.shape
+        x_tau = x.reshape(batch_size, -1)
+        x_source = condition.reshape(batch_size, -1)
+        target_mode_tensor = self._target_mode_tensor(x, target_mode)
+
+        x_in = torch.stack([x_tau, x_source], dim=1)
+        h = self.x_embedder(x_in) + self.pos_embed.to(dtype=x.dtype, device=x.device)
+        c = self.time_embed(t) + self.mode_embed(target_mode_tensor) + self.source_encoder(x_source)
+        c = self.cond_fuse(c)
+
+        for block in self.blocks:
+            h = block(h, c)
+
+        patches = self.final_layer(h, c)
+        velocity = patches.reshape(batch_size, -1)[:, : self.seq_len]
+        return velocity.reshape(original_shape)
+
+
 class ConditionalFlowMatching(nn.Module):
     """
     条件Flow Matching模型
     用于从源光谱分布转换到目标光谱分布
-    使用2D架构
+
+    支持三种速度场骨干网络：
+        backbone='unet'  (默认): 2D U-Net + FiLM
+        backbone='dit'         : Diffusion Transformer + adaLN
+        backbone='vibradit'    : 1D spectral DiT + adaLN-Zero
+
+    DiT 额外参数（仅 backbone='dit' 时生效）：
+        dit_hidden_dim  : Transformer 隐藏维度（默认 256）
+        dit_depth       : DiT 块数量（默认 6）
+        dit_num_heads   : 注意力头数（默认 4）
+        dit_patch_size  : Patch 大小（默认 4）
     """
-    def __init__(self, in_channels=1, hidden_channels=128, num_modes=3, 
-                 image_size=(60, 60), sigma_min=0.01):
+    def __init__(self, in_channels=1, hidden_channels=128, num_modes=3,
+                 image_size=(60, 60), sigma_min=0.01,
+                 backbone='unet',
+                 dit_hidden_dim=256, dit_depth=6,
+                 dit_num_heads=4, dit_patch_size=4):
         super().__init__()
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
         self.num_modes = num_modes
         self.image_size = image_size
         self.sigma_min = sigma_min
-        
-        # 速度场网络（2D版本）
-        self.velocity_field = VelocityFieldNetwork(
-            in_channels=in_channels,
-            hidden_channels=hidden_channels,
-            num_modes=num_modes
-        )
+        self.backbone = backbone
+
+        if backbone == 'dit':
+            self.velocity_field = DiTVelocityFieldNetwork(
+                in_channels=in_channels,
+                hidden_channels=hidden_channels,
+                num_modes=num_modes,
+                image_size=image_size,
+                patch_size=dit_patch_size,
+                dit_hidden_dim=dit_hidden_dim,
+                depth=dit_depth,
+                num_heads=dit_num_heads,
+            )
+        elif backbone == 'vibradit':
+            self.velocity_field = VibraDiTVelocityFieldNetwork(
+                in_channels=in_channels,
+                num_modes=num_modes,
+                image_size=image_size,
+                patch_size=dit_patch_size,
+                hidden_size=dit_hidden_dim,
+                depth=dit_depth,
+                num_heads=dit_num_heads,
+            )
+        else:  # 'unet'（默认，向后兼容）
+            self.velocity_field = VelocityFieldNetwork(
+                in_channels=in_channels,
+                hidden_channels=hidden_channels,
+                num_modes=num_modes
+            )
     
     def sample_t(self, batch_size, device):
         """随机采样时间步"""
