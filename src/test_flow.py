@@ -13,13 +13,81 @@ from pathlib import Path
 from tqdm import tqdm
 from sklearn.metrics import r2_score
 from scipy.stats import pearsonr
+from scipy.spatial.distance import jensenshannon
+from scipy.signal import find_peaks
+from scipy.optimize import linear_sum_assignment
 
 from model_flow import ConditionalFlowMatching
 from utils import (
     inverse_heatmap_to_spectrum,
-    get_device
+    get_device,
+    paired_dataset_use_random_split_by_default,
 )
 from train import PairedModalDataset, get_paired_loaders
+
+
+def calculate_psnr(original, reconstructed):
+    """计算PSNR (Peak Signal-to-Noise Ratio)"""
+    original = original.flatten()
+    reconstructed = reconstructed.flatten()
+    mse = np.mean((original - reconstructed) ** 2)
+    if mse == 0:
+        return float('inf')
+    max_val = np.max(original)
+    if max_val == 0:
+        return np.nan
+    psnr = 20 * np.log10(max_val / np.sqrt(mse))
+    return psnr
+
+
+def calculate_ssim_1d(original, reconstructed):
+    """计算1D数据的SSIM (Structural Similarity Index)"""
+    original = original.flatten()
+    reconstructed = reconstructed.flatten()
+    
+    # 确保长度一致
+    if len(original) != len(reconstructed):
+        min_len = min(len(original), len(reconstructed))
+        original = original[:min_len]
+        reconstructed = reconstructed[:min_len]
+    
+    # 计算均值和方差
+    mu1 = np.mean(original)
+    mu2 = np.mean(reconstructed)
+    sigma1_sq = np.var(original)
+    sigma2_sq = np.var(reconstructed)
+    sigma12 = np.mean((original - mu1) * (reconstructed - mu2))
+    
+    # SSIM参数
+    C1 = 0.01 ** 2
+    C2 = 0.03 ** 2
+    
+    # 计算SSIM
+    numerator = (2 * mu1 * mu2 + C1) * (2 * sigma12 + C2)
+    denominator = (mu1 ** 2 + mu2 ** 2 + C1) * (sigma1_sq + sigma2_sq + C2)
+    
+    if denominator == 0:
+        return np.nan
+    
+    ssim = numerator / denominator
+    return ssim
+
+
+def calculate_js_divergence(original, reconstructed):
+    """计算Jensen-Shannon Divergence"""
+    original = original.flatten()
+    reconstructed = reconstructed.flatten()
+    
+    # 归一化为概率分布（确保非负）
+    original_norm = original - np.min(original) + 1e-10
+    reconstructed_norm = reconstructed - np.min(reconstructed) + 1e-10
+    
+    original_prob = original_norm / np.sum(original_norm)
+    reconstructed_prob = reconstructed_norm / np.sum(reconstructed_norm)
+    
+    # 计算JS Divergence
+    js_div = jensenshannon(original_prob, reconstructed_prob)
+    return js_div
 
 
 def calculate_metrics(original, reconstructed):
@@ -53,19 +121,138 @@ def calculate_metrics(original, reconstructed):
     # 相对误差百分比
     mape = np.mean(np.abs((original - reconstructed) / (original + 1e-8))) * 100
     
+    # PSNR
+    psnr = calculate_psnr(original, reconstructed)
+    
+    # SSIM
+    ssim = calculate_ssim_1d(original, reconstructed)
+    
+    # JS Divergence
+    js_div = calculate_js_divergence(original, reconstructed)
+    
     return {
         'mse': mse,
         'rmse': rmse,
         'mae': mae,
         'mape': mape,
         'r2': r2,
-        'pearson': pearson
+        'pearson': pearson,
+        'psnr': psnr,
+        'ssim': ssim,
+        'js_div': js_div
+    }
+
+
+def _resample_1d(y, new_len):
+    y = np.asarray(y, dtype=np.float64).ravel()
+    if len(y) == new_len:
+        return y
+    x_old = np.linspace(0.0, 1.0, len(y))
+    x_new = np.linspace(0.0, 1.0, new_len)
+    return np.interp(x_new, x_old, y).astype(np.float64)
+
+
+def dtw_distance_sakoe_chiba(a, b, window_ratio=0.12):
+    """Euclidean DTW with Sakoe-Chiba band; a, b same length."""
+    a = np.asarray(a, dtype=np.float64).ravel()
+    b = np.asarray(b, dtype=np.float64).ravel()
+    n = len(a)
+    if n == 0 or len(b) != n:
+        return np.nan
+    r = max(1, int(window_ratio * n))
+    inf = 1e30
+    dtw = np.full((n + 1, n + 1), inf, dtype=np.float64)
+    dtw[0, 0] = 0.0
+    for i in range(1, n + 1):
+        j_min = max(1, i - r)
+        j_max = min(n, i + r)
+        for j in range(j_min, j_max + 1):
+            cost = (a[i - 1] - b[j - 1]) ** 2
+            dtw[i, j] = cost + min(dtw[i - 1, j], dtw[i, j - 1], dtw[i - 1, j - 1])
+    if dtw[n, n] >= inf * 0.5:
+        return np.nan
+    return float(np.sqrt(dtw[n, n]))
+
+
+def compute_dtw_metric(target, pred, subsample=200, window_ratio=0.12):
+    """DTW on uniformly resampled sequences (length capped for speed)."""
+    target = np.asarray(target, dtype=np.float64).ravel()
+    pred = np.asarray(pred, dtype=np.float64).ravel()
+    L = int(min(subsample, len(target), len(pred)))
+    if L < 4:
+        return np.nan
+    a = _resample_1d(target, L)
+    b = _resample_1d(pred, L)
+    return dtw_distance_sakoe_chiba(a, b, window_ratio=window_ratio)
+
+
+def peak_matching_metrics(target, pred, prominence_rel=0.05, distance=5, top_k=30):
+    """
+    find_peaks on target/pred (same relative prominence), then Hungarian match.
+    peak_count_match: 1 if raw peak counts equal else 0 (before top_k truncation).
+    """
+    target = np.asarray(target, dtype=np.float64).ravel()
+    pred = np.asarray(pred, dtype=np.float64).ravel()
+    scale = float(np.max(target) - np.min(target) + 1e-8)
+
+    prom = prominence_rel * scale
+    peaks_gt, _ = find_peaks(target, prominence=prom, distance=distance)
+    peaks_pr, _ = find_peaks(pred, prominence=prom, distance=distance)
+
+    n_gt_raw = len(peaks_gt)
+    n_pr_raw = len(peaks_pr)
+    count_match = 1.0 if n_gt_raw == n_pr_raw else 0.0
+
+    if n_gt_raw == 0 and n_pr_raw == 0:
+        return {
+            'peak_count_match': count_match,
+            'peak_pos_mae': 0.0,
+            'peak_height_mae': 0.0,
+        }
+
+    if n_gt_raw == 0 or n_pr_raw == 0:
+        return {
+            'peak_count_match': count_match,
+            'peak_pos_mae': np.nan,
+            'peak_height_mae': np.nan,
+        }
+
+    h_gt = target[peaks_gt]
+    h_pr = pred[peaks_pr]
+    if len(peaks_gt) > top_k:
+        order = np.argsort(h_gt)[::-1][:top_k]
+        peaks_gt = peaks_gt[order]
+        h_gt = h_gt[order]
+    if len(peaks_pr) > top_k:
+        order = np.argsort(h_pr)[::-1][:top_k]
+        peaks_pr = peaks_pr[order]
+        h_pr = h_pr[order]
+
+    n_gt = len(peaks_gt)
+    n_pr = len(peaks_pr)
+    len_idx = max(len(target) - 1, 1)
+    cost = np.zeros((n_gt, n_pr), dtype=np.float64)
+    for i in range(n_gt):
+        for j in range(n_pr):
+            cost[i, j] = (
+                abs(float(peaks_gt[i]) - float(peaks_pr[j])) / len_idx
+                + abs(float(h_gt[i]) - float(h_pr[j])) / scale
+            )
+
+    row_ind, col_ind = linear_sum_assignment(cost)
+    pos_errs = [abs(float(peaks_gt[i]) - float(peaks_pr[j])) for i, j in zip(row_ind, col_ind)]
+    h_errs = [abs(float(h_gt[i]) - float(h_pr[j])) for i, j in zip(row_ind, col_ind)]
+
+    return {
+        'peak_count_match': count_match,
+        'peak_pos_mae': float(np.mean(pos_errs)) if pos_errs else np.nan,
+        'peak_height_mae': float(np.mean(h_errs)) if h_errs else np.nan,
     }
 
 
 def plot_flow_process(source_heatmaps, target_heatmaps, path_heatmaps_list, save_dir,
                      source_mode, target_mode, num_samples=6, num_steps_show=5, 
-                     target_min_list=None, target_max_list=None):
+                     target_min_list=None, target_max_list=None, cmap='viridis'):
     """
     可视化Flow Matching的生成过程
     展示从源模态到目标模态的转换过程
@@ -149,7 +336,7 @@ def plot_flow_process(source_heatmaps, target_heatmaps, path_heatmaps_list, save
             
             ax = axes[i, j]
             # 显示60x60热图（patch），使用'imshow'直接显示2D图像（denormalize后的）
-            im = ax.imshow(heatmap, cmap='viridis', aspect='equal', interpolation='nearest', 
+            im = ax.imshow(heatmap, cmap=cmap, aspect='equal', interpolation='nearest', 
                           vmin=vmin, vmax=vmax)  # 使用denormalize后的范围
             ax.set_title(title, fontsize=10, fontweight='bold' if j in [0, num_steps_show-1] else 'normal')
             ax.axis('off')
@@ -172,6 +359,41 @@ def plot_flow_process(source_heatmaps, target_heatmaps, path_heatmaps_list, save
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Saved flow process visualization to: {save_path}")
+
+
+def plot_source_xt_pair(source_heatmap, xt_heatmap, save_dir, source_mode, target_mode, t_value, cmap='viridis'):
+    """
+    绘制单个样本的 source 与 x_t 热图（1x2）
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+
+    # 使用统一色彩范围，便于直接比较
+    vmin = min(source_heatmap.min(), xt_heatmap.min())
+    vmax = max(source_heatmap.max(), xt_heatmap.max())
+
+    im0 = axes[0].imshow(
+        source_heatmap, cmap=cmap, aspect='equal', interpolation='nearest',
+        vmin=vmin, vmax=vmax
+    )
+    axes[0].set_title(f'Source {source_mode.upper()} (t=0)', fontsize=11, fontweight='bold')
+    axes[0].axis('off')
+
+    im1 = axes[1].imshow(
+        xt_heatmap, cmap=cmap, aspect='equal', interpolation='nearest',
+        vmin=vmin, vmax=vmax
+    )
+    axes[1].set_title(f'x_t ({target_mode.upper()} flow, t={t_value:.2f})', fontsize=11, fontweight='bold')
+    axes[1].axis('off')
+
+    plt.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04, label='Normalized intensity')
+    plt.tight_layout()
+
+    save_path = os.path.join(save_dir, f'flow_{source_mode}2{target_mode}_source_xt_t{t_value:.2f}.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Saved source + x_t visualization to: {save_path}")
 
 
 def plot_comparison(original_list, reconstructed_list, save_dir, prefix, 
@@ -218,7 +440,13 @@ def plot_comparison(original_list, reconstructed_list, save_dir, prefix,
 
 
 def test_modality_pair(model, test_loader, source_mode, target_mode, device, 
-                      save_dir='results', num_steps=100, use_rk4=True):
+                      save_dir='results', num_steps=100, use_rk4=True, dump_index=None,
+                      extra_metrics=True,
+                      dtw_subsample=200,
+                      dtw_window_ratio=0.12,
+                      peak_prominence_rel=0.05,
+                      peak_distance=5,
+                      peak_top_k=30):
     """
     测试单个模态对的转换性能
     
@@ -231,6 +459,12 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
         save_dir: 结果保存目录
         num_steps: ODE求解步数
         use_rk4: 是否使用RK4方法（更准确但更慢）
+        extra_metrics: 是否计算 DTW 与峰相关指标（更慢）
+        dtw_subsample: DTW 前将谱统一重采样到该长度（上限）
+        dtw_window_ratio: Sakoe-Chiba 带宽比例
+        peak_prominence_rel: find_peaks prominence = rel * (max-min)
+        peak_distance: find_peaks 最小峰间距（索引）
+        peak_top_k: 匹配时每侧最多保留的峰数（避免过多小峰）
     """
     model.eval()
     
@@ -239,11 +473,33 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
     
     all_metrics = {
         'mse': [], 'rmse': [], 'mae': [], 'mape': [],
-        'r2': [], 'pearson': []
+        'r2': [], 'pearson': [], 'psnr': [], 'ssim': [], 'js_div': []
     }
+    if extra_metrics:
+        all_metrics['dtw'] = []
+        all_metrics['peak_count_match'] = []
+        all_metrics['peak_pos_mae'] = []
+        all_metrics['peak_height_mae'] = []
+
+    def has_invalid_core_metrics(metrics):
+        core_metric_keys = (
+            'mse', 'rmse', 'mae', 'mape',
+            'r2', 'pearson', 'psnr', 'ssim', 'js_div',
+        )
+        for key in core_metric_keys:
+            value = metrics.get(key)
+            if value is None or np.isnan(value):
+                return True
+        return False
     
     original_spectra = []
     generated_spectra = []
+    all_targets = []
+    all_preds = []
+    all_sources = []
+    sample_indices = []
+    total_samples = 0
+    skipped_invalid_samples = 0
     
     # 用于Flow过程可视化的数据
     source_heatmaps_for_flow = []
@@ -318,22 +574,53 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
             target_np = target_batch.numpy()
             
             # 将热图转换回光谱
+            base_idx = total_samples
             for i in range(gen_np.shape[0]):
+                total_samples += 1
                 gen_heatmap = gen_np[i, 0]  # (H, W)
                 target_heatmap = target_np[i, 0]
+                source_heatmap_np = source_batch[i, 0].cpu().numpy()
                 
                 spec_min = float(target_min_batch[i])
                 spec_max = float(target_max_batch[i])
+                src_min = float(source_min_batch[i])
+                src_max = float(source_max_batch[i])
                 
                 # 转换回1D光谱
                 gen_spec = inverse_heatmap_to_spectrum(gen_heatmap, spec_min, spec_max)
                 target_spec = inverse_heatmap_to_spectrum(target_heatmap, spec_min, spec_max)
+                source_spec = inverse_heatmap_to_spectrum(source_heatmap_np, src_min, src_max)
                 
                 # 计算指标
                 metrics = calculate_metrics(target_spec, gen_spec)
+                if extra_metrics:
+                    metrics['dtw'] = compute_dtw_metric(
+                        target_spec, gen_spec,
+                        subsample=dtw_subsample,
+                        window_ratio=dtw_window_ratio,
+                    )
+                    metrics.update(
+                        peak_matching_metrics(
+                            target_spec, gen_spec,
+                            prominence_rel=peak_prominence_rel,
+                            distance=peak_distance,
+                            top_k=peak_top_k,
+                        )
+                    )
+                if has_invalid_core_metrics(metrics):
+                    skipped_invalid_samples += 1
+                    continue
                 for key in all_metrics:
-                    if not np.isnan(metrics[key]):
-                        all_metrics[key].append(metrics[key])
+                    if key not in metrics:
+                        continue
+                    v = metrics[key]
+                    if isinstance(v, (float, np.floating)) and np.isnan(v):
+                        continue
+                    all_metrics[key].append(v)
+                all_targets.append(target_spec)
+                all_preds.append(gen_spec)
+                all_sources.append(source_spec)
+                sample_indices.append(base_idx + i)
                 
                 # 保存前几个样本用于可视化
                 if len(original_spectra) < 5:
@@ -343,20 +630,52 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
             # 更新进度条，显示当前R²分数（如果有的话）
             if len(all_metrics['r2']) > 0:
                 current_r2 = np.mean(all_metrics['r2'])
-                pbar.set_postfix({'R²': f"{current_r2:.4f}", 'samples': len(all_metrics['r2'])})
+                pbar.set_postfix({
+                    'R²': f"{current_r2:.4f}",
+                    'valid': len(all_metrics['r2']),
+                    'skipped': skipped_invalid_samples,
+                })
             else:
-                pbar.set_postfix({'samples': len(all_metrics['mse'])})
+                pbar.set_postfix({
+                    'valid': len(all_metrics['mse']),
+                    'skipped': skipped_invalid_samples,
+                })
     
     # 打印平均指标
     print(f"\n{'='*60}")
     print(f"Test Results (Flow Matching): {source_mode} -> {target_mode}")
     print(f"{'='*60}")
+    print(f"Valid samples: {len(all_metrics['mse'])}/{total_samples} "
+          f"(skipped invalid core-metric samples: {skipped_invalid_samples})")
+    if len(all_metrics['mse']) == 0:
+        print("Error: no valid samples remain after filtering invalid metrics.")
+        return all_metrics
     print(f"MSE:      {np.mean(all_metrics['mse']):.6e} ± {np.std(all_metrics['mse']):.6e}")
     print(f"RMSE:     {np.mean(all_metrics['rmse']):.6e} ± {np.std(all_metrics['rmse']):.6e}")
     print(f"MAE:      {np.mean(all_metrics['mae']):.6e} ± {np.std(all_metrics['mae']):.6e}")
     print(f"MAPE:     {np.mean(all_metrics['mape']):.4f}% ± {np.std(all_metrics['mape']):.4f}%")
     print(f"R²:       {np.mean(all_metrics['r2']):.6f} ± {np.std(all_metrics['r2']):.6f}")
     print(f"Pearson:  {np.mean(all_metrics['pearson']):.6f} ± {np.std(all_metrics['pearson']):.6f}")
+    if len(all_metrics['psnr']) > 0:
+        print(f"PSNR:     {np.mean(all_metrics['psnr']):.6f} ± {np.std(all_metrics['psnr']):.6f}")
+    if len(all_metrics['ssim']) > 0:
+        print(f"SSIM:     {np.mean(all_metrics['ssim']):.6f} ± {np.std(all_metrics['ssim']):.6f}")
+    if len(all_metrics['js_div']) > 0:
+        print(f"JS Div:   {np.mean(all_metrics['js_div']):.6f} ± {np.std(all_metrics['js_div']):.6f}")
+    if extra_metrics and all_metrics.get('dtw'):
+        dtw_vals = np.asarray(all_metrics['dtw'], dtype=np.float64)
+        print(f"DTW:      {np.nanmean(dtw_vals):.6f} ± {np.nanstd(dtw_vals):.6f}  "
+              f"(subsample<={dtw_subsample}, Sakoe-Chiba w={dtw_window_ratio:.3f})")
+    if extra_metrics and all_metrics.get('peak_count_match'):
+        pcm = np.asarray(all_metrics['peak_count_match'])
+        print(f"Peak cnt acc: {np.mean(pcm):.4f}  "
+              f"(1 if raw #peaks equal on target vs pred; prominence_rel={peak_prominence_rel}, dist={peak_distance})")
+    if extra_metrics and all_metrics.get('peak_pos_mae'):
+        pp = np.asarray(all_metrics['peak_pos_mae'], dtype=np.float64)
+        print(f"Peak pos MAE (matched): {np.nanmean(pp):.4f} ± {np.nanstd(pp):.4f}  (index units, top_k={peak_top_k})")
+    if extra_metrics and all_metrics.get('peak_height_mae'):
+        ph = np.asarray(all_metrics['peak_height_mae'], dtype=np.float64)
+        print(f"Peak hgt MAE (matched): {np.nanmean(ph):.6e} ± {np.nanstd(ph):.6e}")
     
     # 绘制对比图
     if len(original_spectra) > 0:
@@ -366,6 +685,68 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
             source_mode, target_mode,
             num_samples=min(5, len(original_spectra))
         )
+    
+    # 保存全量预测/目标/输入，及指定索引的对照
+    if sample_indices and all_targets and all_preds and all_sources:
+        os.makedirs(save_dir, exist_ok=True)
+        preds_arr = np.vstack(all_preds)
+        targets_arr = np.vstack(all_targets)
+        sources_arr = np.vstack(all_sources)
+        idx_arr = np.array(sample_indices, dtype=int)
+
+        def _save_matrix(path, idx, matrix):
+            with open(path, "w", encoding="utf-8") as f:
+                header = "index," + ",".join([f"v{i}" for i in range(matrix.shape[1])])
+                f.write(header + "\n")
+                for i_row, row in zip(idx, matrix):
+                    f.write(f"{i_row}," + ",".join(f"{v:.6e}" for v in row) + "\n")
+
+        preds_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_preds.csv"
+        targets_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_targets.csv"
+        sources_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_sources.csv"
+        _save_matrix(preds_path, idx_arr, preds_arr)
+        _save_matrix(targets_path, idx_arr, targets_arr)
+        _save_matrix(sources_path, idx_arr, sources_arr)
+        print(f"\nSaved predictions to: {preds_path}")
+        print(f"Saved targets to:      {targets_path}")
+        print(f"Saved sources to:      {sources_path}")
+
+        # 保存每个样本的R2列表（顺序与index一致）
+        r2_list = np.array(all_metrics['r2'], dtype=float)
+        r2_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_r2_per_sample.csv"
+        with open(r2_path, "w", encoding="utf-8") as f:
+            f.write("index,r2\n")
+            for idx_val, r2_val in zip(idx_arr, r2_list):
+                if not np.isnan(r2_val):
+                    f.write(f"{idx_val},{r2_val:.6f}\n")
+        print(f"Saved per-sample R2 to: {r2_path}")
+
+        # 保存per-sample PSNR, SSIM, JS Divergence
+        psnr_list = np.array(all_metrics['psnr'], dtype=float)
+        ssim_list = np.array(all_metrics['ssim'], dtype=float)
+        js_div_list = np.array(all_metrics['js_div'], dtype=float)
+        metrics_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_metrics_per_sample.csv"
+        with open(metrics_path, "w", encoding="utf-8") as f:
+            f.write("index,psnr,ssim,js_div\n")
+            for idx_val, psnr_val, ssim_val, js_val in zip(idx_arr, psnr_list, ssim_list, js_div_list):
+                f.write(f"{idx_val},{psnr_val:.6f},{ssim_val:.6f},{js_val:.6f}\n")
+        print(f"Saved per-sample metrics (PSNR, SSIM, JS Div) to: {metrics_path}")
+
+        if dump_index:
+            for want_idx in dump_index:
+                if want_idx in idx_arr:
+                    pos = np.where(idx_arr == want_idx)[0][0]
+                    tgt_row = targets_arr[pos]
+                    pred_row = preds_arr[pos]
+                    src_row = sources_arr[pos]
+                    out_path = Path(save_dir) / f"flow_{source_mode}2{target_mode}_idx{want_idx}.csv"
+                    with open(out_path, "w", encoding="utf-8") as f:
+                        f.write("target,pred,source\n")
+                        for tv, pv, sv in zip(tgt_row, pred_row, src_row):
+                            f.write(f"{tv:.6e},{pv:.6e},{sv:.6e}\n")
+                    print(f"Dumped target/pred for index {want_idx} -> {out_path}")
+                else:
+                    print(f"Warning: requested index {want_idx} not found in this test run.")
     
     # 绘制Flow Matching过程可视化
     if len(source_heatmaps_for_flow) > 0:
@@ -386,7 +767,7 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
 
 
 def generate_process_only(model, test_loader, source_mode, target_mode, device, 
-                          save_dir='results', num_steps=150, use_rk4=True):
+                          save_dir='results', num_steps=150, use_rk4=True, cmap='viridis'):
     """
     快速生成Flow Matching过程可视化（只处理6个样本，不运行完整测试）
     """
@@ -455,11 +836,64 @@ def generate_process_only(model, test_loader, source_mode, target_mode, device,
             num_samples=min(6, len(source_heatmaps_for_flow)),
             num_steps_show=5,
             target_min_list=target_min_list_for_flow,
-            target_max_list=target_max_list_for_flow
+            target_max_list=target_max_list_for_flow,
+            cmap=cmap
         )
         print(f"Process visualization generated successfully!")
     else:
         print("Error: No samples collected for visualization")
+
+
+def generate_single_xt_example(model, test_loader, source_mode, target_mode, device,
+                               save_dir='results', num_steps=150, use_rk4=True, xt_t=0.5, cmap='viridis'):
+    """
+    仅生成单个样本的 source 与指定时刻 x_t 热图（1x2）
+    """
+    model.eval()
+
+    mode_map = {'ir': 0, 'uv': 1, 'raman': 2}
+    target_mode_idx = mode_map[target_mode]
+
+    # 限制到合法时间范围
+    xt_t = max(0.0, min(1.0, float(xt_t)))
+    print(f"Generating single source + x_t visualization: {source_mode} -> {target_mode}, t={xt_t:.2f}")
+
+    with torch.no_grad():
+        for batch in test_loader:
+            source_batch = batch[0].to(device)
+
+            # 只取第一个样本
+            source_sample = source_batch[:1]
+
+            # 获取完整路径
+            _, path = model.sample(
+                source_sample,
+                target_mode=target_mode_idx,
+                num_steps=num_steps,
+                use_rk4=use_rk4,
+                return_path=True
+            )
+
+            if len(path) == 0:
+                print("Error: Empty path returned by model.sample")
+                return
+
+            source_hm = source_sample[0, 0].cpu().numpy()
+            path_np = [p[0, 0].cpu().numpy() for p in path]
+
+            step_idx = int(round(xt_t * (len(path_np) - 1)))
+            step_idx = max(0, min(step_idx, len(path_np) - 1))
+            xt_hm = path_np[step_idx]
+            t_actual = step_idx / (len(path_np) - 1) if len(path_np) > 1 else 0.0
+
+            plot_source_xt_pair(
+                source_hm, xt_hm, save_dir,
+                source_mode, target_mode, t_actual, cmap=cmap
+            )
+            print("Single source + x_t visualization generated successfully!")
+            return
+
+    print("Error: No samples found in test_loader")
 
 
 def main():
@@ -480,6 +914,12 @@ def main():
                        help='Custom target CSV filename (optional, overrides default naming)')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
+    parser.add_argument('--backbone', type=str, default='unet', choices=['unet', 'dit', 'vibradit'],
+                       help='Backbone: unet (default), dit (2D DiT), or vibradit (1D spectral DiT). Must match training.')
+    parser.add_argument('--dit_hidden_dim', type=int, default=256, help='[DiT only] Transformer hidden dim')
+    parser.add_argument('--dit_depth', type=int, default=6, help='[DiT only] Number of DiT blocks')
+    parser.add_argument('--dit_num_heads', type=int, default=4, help='[DiT only] Number of attention heads')
+    parser.add_argument('--dit_patch_size', type=int, default=4, help='[DiT only] Patch size')
     parser.add_argument('--heatmap_size', type=int, default=3600,
                        help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
@@ -490,8 +930,10 @@ def main():
                        help='Optional target spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--no_split', action='store_true',
                        help='Do not split dataset; treat the whole provided CSV/H5 as the test set. '
-                            'Note: For qm9s dataset, split is always used unless this flag is set. '
+                            'Note: For QM9S / QMe14S, the same random_split test subset as training is used unless this flag is set. '
                             'For other datasets, if --source_csv/--target_csv is provided, full dataset is used by default.')
+    parser.add_argument('--use_split_test', action='store_true',
+                       help='Force random_split and evaluate only the test subset, even when --source_csv/--target_csv is provided.')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
     parser.add_argument('--num_steps', type=int, default=150, help='Number of ODE steps (default: 150, more steps = better quality)')
     parser.add_argument('--use_rk4', action='store_true', help='Use RK4 ODE solver (more accurate but slower, default: True)')
@@ -501,6 +943,26 @@ def main():
                        help='Random seed for reproducibility (default: 42)')
     parser.add_argument('--process_only', action='store_true',
                        help='Only generate process visualization (fast, no full test)')
+    parser.add_argument('--xt_only', action='store_true',
+                       help='Only generate a single 1x2 heatmap figure: source and selected x_t')
+    parser.add_argument('--xt_t', type=float, default=0.5,
+                       help='The t value for x_t visualization in [0,1] (default: 0.5)')
+    parser.add_argument('--cmap', type=str, default='viridis',
+                       help='Matplotlib colormap for heatmaps (e.g., coolwarm, RdBu_r)')
+    parser.add_argument('--dump_index', type=int, nargs='+', default=None,
+                       help='List of sample indices (within this test run) to dump target/pred spectra to CSV')
+    parser.add_argument('--no_extra_metrics', action='store_true',
+                       help='Skip DTW and peak-based metrics (faster full test)')
+    parser.add_argument('--dtw_subsample', type=int, default=200,
+                       help='Resample length cap before DTW (default: 200)')
+    parser.add_argument('--dtw_window_ratio', type=float, default=0.12,
+                       help='Sakoe-Chiba band width as fraction of length (default: 0.12)')
+    parser.add_argument('--peak_prominence_rel', type=float, default=0.05,
+                       help='find_peaks prominence = rel * (max-min) of target (default: 0.05)')
+    parser.add_argument('--peak_distance', type=int, default=5,
+                       help='find_peaks minimum distance between peaks in index (default: 5)')
+    parser.add_argument('--peak_top_k', type=int, default=30,
+                       help='Max peaks per side for Hungarian match (default: 30)')
     args = parser.parse_args()
     
     # 设置随机种子以确保结果可复现
@@ -516,23 +978,31 @@ def main():
     print(f"Using device: {device}")
     print(f"Random seed: {args.seed}")
     
-    # 创建模型（2D架构）
+    # 创建模型（支持 unet / dit backbone）
     model = ConditionalFlowMatching(
         in_channels=1,
         hidden_channels=args.hidden_channels,
         num_modes=3,
         image_size=tuple(args.resize_shape),
-        sigma_min=0.01
+        sigma_min=0.01,
+        backbone=args.backbone,
+        dit_hidden_dim=args.dit_hidden_dim,
+        dit_depth=args.dit_depth,
+        dit_num_heads=args.dit_num_heads,
+        dit_patch_size=args.dit_patch_size,
     ).to(device)
     
-    # 加载检查点（支持带seed和不带seed的文件名）
+    # 加载检查点：
+    # - unet: 兼容旧命名（无 backbone 后缀 / 无 seed）
+    # - dit : 必须加载 dit 对应 checkpoint，禁止回退到 unet checkpoint
+    backbone_tag = f'_{args.backbone}' if args.backbone != 'unet' else ''
     checkpoint_path = os.path.join(
         args.checkpoint_dir,
-        f'flow_{args.source_mode}2{args.target_mode}_best_seed{args.seed}.pt'
+        f'flow_{args.source_mode}2{args.target_mode}{backbone_tag}_best_seed{args.seed}.pt'
     )
     
-    # 如果带seed的文件不存在，尝试加载不带seed的文件（向后兼容）
-    if not os.path.exists(checkpoint_path):
+    # 仅对 unet 保持旧 checkpoint 命名兼容
+    if args.backbone == 'unet' and not os.path.exists(checkpoint_path):
         checkpoint_path_old = os.path.join(
             args.checkpoint_dir,
             f'flow_{args.source_mode}2{args.target_mode}_best.pt'
@@ -546,7 +1016,27 @@ def main():
         return
     
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    load_result = model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    missing_keys = list(load_result.missing_keys)
+    unexpected_keys = list(load_result.unexpected_keys)
+    if missing_keys or unexpected_keys:
+        print("Error: Checkpoint/model mismatch detected.")
+        if missing_keys:
+            print("Missing keys:")
+            for key in missing_keys[:20]:
+                print(f"  - {key}")
+            if len(missing_keys) > 20:
+                print(f"  ... and {len(missing_keys) - 20} more")
+        if unexpected_keys:
+            print("Unexpected keys:")
+            for key in unexpected_keys[:20]:
+                print(f"  - {key}")
+            if len(unexpected_keys) > 20:
+                print(f"  ... and {len(unexpected_keys) - 20} more")
+        raise RuntimeError(
+            f"Checkpoint {checkpoint_path} does not match backbone='{args.backbone}'. "
+            "Please load the correct checkpoint."
+        )
     print(f"Loaded checkpoint from: {checkpoint_path}")
     
     # 加载测试数据
@@ -569,20 +1059,17 @@ def main():
         return
     
     # 创建测试数据加载器
-    # For qm9s dataset, always use split (even if source_csv/target_csv provided)
-    # For other datasets, use full dataset if source_csv/target_csv provided (unless --no_split is explicitly set)
-    is_qm9s = False
-    if 'qm9s' in str(args.data_dir).lower():
-        is_qm9s = True
-    elif args.source_csv and 'qm9' in str(args.source_csv).lower():
-        is_qm9s = True
-    elif args.target_csv and 'qm9' in str(args.target_csv).lower():
-        is_qm9s = True
-    
-    # For qm9s, always split unless --no_split is explicitly set
-    # For others, use full dataset if CSV files provided (unless --no_split is explicitly set)
-    if is_qm9s:
-        use_full_as_test = args.no_split  # qm9s: only use full if explicitly --no_split
+    # QM9S / QMe14S：与训练一致，默认 random_split 的 test 子集（即使显式给了默认 CSV 名）
+    # 其他数据：若显式提供 source/target CSV，则默认全量作 test，除非 --no_split 未提供… 见下
+    if args.use_split_test and args.no_split:
+        raise ValueError("--use_split_test and --no_split cannot be used together.")
+
+    if args.use_split_test:
+        use_full_as_test = False
+    elif paired_dataset_use_random_split_by_default(
+        args.data_dir, args.source_csv, args.target_csv
+    ):
+        use_full_as_test = args.no_split
     else:
         use_full_as_test = args.no_split or (args.source_csv is not None) or (args.target_csv is not None)
     
@@ -618,12 +1105,20 @@ def main():
     # 如果指定了--no_rk4，则使用Euler；否则默认使用RK4（也可以通过--use_rk4显式指定）
     use_rk4 = not args.no_rk4  # 默认True，除非指定--no_rk4
     
+    # 如果只生成source+x_t图，跳过完整测试
+    if args.xt_only:
+        generate_single_xt_example(
+            model, test_loader,
+            args.source_mode, args.target_mode,
+            device, args.save_dir, args.num_steps, use_rk4, args.xt_t, args.cmap
+        )
+        print("\nSingle x_t visualization completed!")
     # 如果只生成process图，跳过完整测试
-    if args.process_only:
+    elif args.process_only:
         generate_process_only(
             model, test_loader,
             args.source_mode, args.target_mode,
-            device, args.save_dir, args.num_steps, use_rk4
+            device, args.save_dir, args.num_steps, use_rk4, args.cmap
         )
         print("\nProcess visualization completed!")
     else:
@@ -631,7 +1126,14 @@ def main():
         metrics = test_modality_pair(
             model, test_loader,
             args.source_mode, args.target_mode,
-            device, args.save_dir, args.num_steps, use_rk4
+            device, args.save_dir, args.num_steps, use_rk4,
+            dump_index=args.dump_index,
+            extra_metrics=not args.no_extra_metrics,
+            dtw_subsample=args.dtw_subsample,
+            dtw_window_ratio=args.dtw_window_ratio,
+            peak_prominence_rel=args.peak_prominence_rel,
+            peak_distance=args.peak_distance,
+            peak_top_k=args.peak_top_k,
         )
         print("\nTesting completed!")
 
