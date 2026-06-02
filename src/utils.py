@@ -282,6 +282,31 @@ def kl_annealing(step, beta_max=1.0, k=0.001, x0=500):
     return float(beta_max / (1 + math.exp(-k * (step - x0))))
 
 
+def paired_dataset_use_random_split_by_default(
+    data_dir,
+    source_csv=None,
+    target_csv=None,
+) -> bool:
+    """
+    QM9S / QMe14S 等大配对光谱表：与 train 一致，默认使用 random_split 得到的 test 子集。
+    若路径中出现这些关键字，则即使显式传入默认命名的 source/target CSV，也不自动「全量当 test」。
+    """
+    blob = " ".join(
+        [
+            str(data_dir),
+            str(source_csv or ""),
+            str(target_csv or ""),
+        ]
+    ).lower()
+    if "qm9s" in blob or "qme14s" in blob:
+        return True
+    if source_csv and "qm9" in str(source_csv).lower():
+        return True
+    if target_csv and "qm9" in str(target_csv).lower():
+        return True
+    return False
+
+
 def save_checkpoint(model, optimizer, epoch, loss, filepath):
     """保存模型检查点"""
     torch.save({
