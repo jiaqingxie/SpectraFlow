@@ -130,15 +130,15 @@ def process_lmdb_dataset(lmdb_path, output_dir, dataset_name, target_size=3600, 
     # 先尝试作为文件打开（subdir=False）
     try:
         if lmdb_path_obj.is_file():
-            env = lmdb.open(
+    env = lmdb.open(
                 str(lmdb_path),
-                subdir=False,
-                readonly=True,
-                lock=False,
-                readahead=False,
-                meminit=False,
-                max_readers=256
-            )
+        subdir=False,
+        readonly=True,
+        lock=False,
+        readahead=False,
+        meminit=False,
+        max_readers=256
+    )
         elif lmdb_path_obj.is_dir():
             # 如果是目录，尝试作为目录打开
             env = lmdb.open(
