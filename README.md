@@ -1,6 +1,6 @@
 # SpectraFlow
 
-**Physics-Guided Diffusion-Transformer Flow Matching for IR-Raman Spectral Interconversion**
+**Physics-Guided Flow Matching for IR-Raman Spectral Interconversion**
 
 SpectraFlow is a spectral translation framework for cross-modal molecular spectra, with a focus on IR and Raman interconversion. The current codebase keeps three main model families:
 
