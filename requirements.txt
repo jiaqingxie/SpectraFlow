@@ -1,0 +1,20 @@
+# Core deep learning
+torch>=2.0
+
+# Scientific stack
+numpy>=1.23,<2.0
+pandas>=1.4
+scipy>=1.9
+scikit-learn>=1.1
+h5py>=3.7
+tqdm>=4.60
+matplotlib>=3.5
+
+# Cheminformatics (SMILES parsing, descriptors, Morgan fingerprints, scaffolds)
+rdkit>=2022.9
+
+# Representation analysis (UMAP projections for embedding figures)
+umap-learn>=0.5
+
+# Optional: only needed for LMDB-based raw data ingestion (process_lmdb.py / process_all_lmdb.py)
+# lmdb>=1.3

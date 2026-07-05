@@ -67,6 +67,7 @@ def train_and_eval_one_feature(
     feature_name: str,
     target_name: str,
     model_type: str = "ridge",
+    ridge_alpha: float = 1.0,
     test_size: float = 0.2,
     random_state: int = 42,
 ):
@@ -78,7 +79,7 @@ def train_and_eval_one_feature(
     )
 
     if model_type == "ridge":
-        model = make_pipeline(StandardScaler(), Ridge(alpha=1.0, random_state=random_state))
+        model = make_pipeline(StandardScaler(), Ridge(alpha=ridge_alpha, random_state=random_state))
     elif model_type == "rf":
         model = RandomForestRegressor(
             n_estimators=200,
@@ -110,6 +111,7 @@ def cross_validate_feature(
     feature_name: str,
     target_name: str,
     model_type: str = "ridge",
+    ridge_alpha: float = 1.0,
     n_splits: int = 5,
     random_state: int = 42,
 ):
@@ -125,7 +127,7 @@ def cross_validate_feature(
         y_train, y_test = y[train_idx], y[test_idx]
 
         if model_type == "ridge":
-            model = make_pipeline(StandardScaler(), Ridge(alpha=1.0, random_state=random_state))
+            model = make_pipeline(StandardScaler(), Ridge(alpha=ridge_alpha, random_state=random_state))
         elif model_type == "rf":
             model = RandomForestRegressor(
                 n_estimators=200,
@@ -203,6 +205,13 @@ def main():
         help="Downstream model type: ridge (linear) or rf (Random Forest)",
     )
     parser.add_argument(
+        "--ridge_alpha",
+        type=float,
+        default=1.0,
+        help="Ridge regularization strength. Increase this (e.g. 10 or 100) "
+        "if ridge reports ill-conditioned matrix warnings.",
+    )
+    parser.add_argument(
         "--test_size",
         type=float,
         default=0.2,
@@ -271,6 +280,7 @@ def main():
             feature_name="IR raw",
             target_name=args.target_property,
             model_type=args.model_type,
+            ridge_alpha=args.ridge_alpha,
             n_splits=args.cv_folds,
             random_state=args.seed,
         )
@@ -280,6 +290,7 @@ def main():
             feature_name="Raman raw",
             target_name=args.target_property,
             model_type=args.model_type,
+            ridge_alpha=args.ridge_alpha,
             n_splits=args.cv_folds,
             random_state=args.seed,
         )
@@ -289,6 +300,7 @@ def main():
             feature_name="Flow embedding",
             target_name=args.target_property,
             model_type=args.model_type,
+            ridge_alpha=args.ridge_alpha,
             n_splits=args.cv_folds,
             random_state=args.seed,
         )
@@ -299,6 +311,7 @@ def main():
                 feature_name="Morgan fingerprint",
                 target_name=args.target_property,
                 model_type=args.model_type,
+                ridge_alpha=args.ridge_alpha,
                 n_splits=args.cv_folds,
                 random_state=args.seed,
             )
@@ -309,6 +322,7 @@ def main():
                 feature_name="Flow + Morgan FP",
                 target_name=args.target_property,
                 model_type=args.model_type,
+                ridge_alpha=args.ridge_alpha,
                 n_splits=args.cv_folds,
                 random_state=args.seed,
             )
@@ -330,6 +344,7 @@ def main():
                 feature_name="IR raw",
                 target_name=args.target_property,
                 model_type=args.model_type,
+                ridge_alpha=args.ridge_alpha,
                 test_size=args.test_size,
                 random_state=seed,
             )
@@ -339,6 +354,7 @@ def main():
                 feature_name="Raman raw",
                 target_name=args.target_property,
                 model_type=args.model_type,
+                ridge_alpha=args.ridge_alpha,
                 test_size=args.test_size,
                 random_state=seed,
             )
@@ -348,6 +364,7 @@ def main():
                 feature_name="Flow embedding",
                 target_name=args.target_property,
                 model_type=args.model_type,
+                ridge_alpha=args.ridge_alpha,
                 test_size=args.test_size,
                 random_state=seed,
             )
@@ -358,6 +375,7 @@ def main():
                     feature_name="Morgan fingerprint",
                     target_name=args.target_property,
                     model_type=args.model_type,
+                    ridge_alpha=args.ridge_alpha,
                     test_size=args.test_size,
                     random_state=seed,
                 )
@@ -379,6 +397,7 @@ def main():
                     feature_name="Flow + Morgan FP",
                     target_name=args.target_property,
                     model_type=args.model_type,
+                    ridge_alpha=args.ridge_alpha,
                     test_size=args.test_size,
                     random_state=seed,
                 )

@@ -1,0 +1,36 @@
+# Local LaTeX toolchain (Tectonic binary, etc.)
+.tooling/
+
+# PDF edit backups / temp outputs
+*.bak
+*.new.pdf
+
+# PDF edit backups / temp outputs
+*.pdf.bak
+*.new.pdf
+
+# LaTeX build artifacts
+latex/*.aux
+latex/*.bbl
+latex/*.blg
+latex/*.log
+latex/*.out
+latex/*.synctex.gz
+latex/*.fls
+latex/*.fdb_latexmk
+
+# Python caches and virtual envs
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Runtime data and outputs (point scripts at your own paths)
+data/
+checkpoints/
+downstream/
+
+# Accidental files from shell redirection
+/--data_dir
+/--source_csv
+/python
