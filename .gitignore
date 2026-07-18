@@ -43,6 +43,7 @@ __pycache__/
 venv/
 
 # Editor / OS cruft
+.cursor/
 .vscode/
 .DS_Store
 Thumbs.db
