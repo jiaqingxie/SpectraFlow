@@ -481,8 +481,18 @@ def main():
                        help='Custom source CSV filename (optional, overrides default naming; can be absolute or relative to data_dir)')
     parser.add_argument('--target_csv', type=str, default=None,
                        help='Custom target CSV filename (optional, overrides default naming; can be absolute or relative to data_dir)')
+    parser.add_argument('--val_source_csv', type=str, default=None,
+                       help='Optional explicit validation source CSV/H5 stem')
+    parser.add_argument('--val_target_csv', type=str, default=None,
+                       help='Optional explicit validation target CSV/H5 stem')
+    parser.add_argument('--init_checkpoint', type=str, default=None,
+                       help='Initialize model weights from a checkpoint without restoring optimizer state')
     parser.add_argument('--epochs', type=int, default=50, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+    parser.add_argument('--train_fraction', type=float, default=0.7,
+                       help='Fraction of the provided training file used for optimization')
+    parser.add_argument('--val_fraction', type=float, default=0.15,
+                       help='Fraction of the provided training file used for validation')
     parser.add_argument('--learning_rate', type=float, default=4e-4, help='Learning rate (aligned with VAE, more stable)')
     parser.add_argument('--hidden_channels', type=int, default=128, help='Hidden channels')
     parser.add_argument('--backbone', type=str, default='unet', choices=['unet', 'dit', 'vibradit'],
@@ -501,6 +511,8 @@ def main():
                             'By default, if --data_dir path contains "qm9s", checkpoints will be saved under save_dir/qm9s/.')
     parser.add_argument('--sigma_min', type=float, default=0.01, help='Minimum noise level')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
+    parser.add_argument('--cpu_threads', type=int, default=0,
+                       help='Limit PyTorch CPU and inter-op threads; 0 keeps the environment default')
     parser.add_argument('--source_mode', type=str, required=True,
                        choices=['ir', 'uv', 'raman'],
                        help='Source modality')
@@ -511,6 +523,8 @@ def main():
                        help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
                        help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--preserve_spectral_order', action='store_true',
+                       help='Reshape spectra directly without patch-wise index reordering')
     parser.add_argument('--source_size', type=int, default=None,
                        help='Optional source spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--target_size', type=int, default=None,
@@ -553,6 +567,14 @@ def main():
     parser.add_argument('--cudnn_benchmark', action='store_true',
                        help='Enable cudnn.benchmark for faster convs (less strict reproducibility)')
     args = parser.parse_args()
+
+    if args.cpu_threads > 0:
+        torch.set_num_threads(args.cpu_threads)
+        try:
+            torch.set_num_interop_threads(args.cpu_threads)
+        except RuntimeError:
+            pass
+        print(f"[train] CPU thread pools limited to {args.cpu_threads}")
 
     # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
     # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
@@ -609,6 +631,10 @@ def main():
     
     # 创建训练器
     trainer = FlowMatchingTrainer(config, device)
+    if args.init_checkpoint:
+        checkpoint = torch.load(args.init_checkpoint, map_location=device)
+        trainer.model.load_state_dict(checkpoint['model_state_dict'])
+        print(f"[fine-tune] Initialized model weights from: {args.init_checkpoint}")
     
     # 加载数据
     data_dir = Path(args.data_dir)
@@ -629,17 +655,59 @@ def main():
         return
     
     # 创建数据加载器
-    train_loader, val_loader, test_loader = get_paired_loaders(
-        str(source_csv), str(target_csv),
-        batch_size=config.batch_size,
-        source_size=args.source_size,
-        target_size=args.target_size,
-        heatmap_size=args.heatmap_size,
-        resize_shape=config.resize_shape,
-        out_channels=config.in_channels,
-        use_h5=True,
-        seed=args.seed
-    )
+    if bool(args.val_source_csv) != bool(args.val_target_csv):
+        parser.error("--val_source_csv and --val_target_csv must be provided together")
+    if args.val_source_csv:
+        val_source_csv = (
+            Path(args.val_source_csv)
+            if os.path.isabs(args.val_source_csv)
+            else data_dir / args.val_source_csv
+        )
+        val_target_csv = (
+            Path(args.val_target_csv)
+            if os.path.isabs(args.val_target_csv)
+            else data_dir / args.val_target_csv
+        )
+        for path in (val_source_csv, val_target_csv):
+            if not path.exists() and not path.with_suffix('.h5').exists():
+                raise FileNotFoundError(path)
+        dataset_kwargs = dict(
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=config.resize_shape,
+            out_channels=config.in_channels,
+            use_h5=True,
+            preserve_spectral_order=args.preserve_spectral_order,
+        )
+        train_dataset = PairedModalDataset(
+            str(source_csv), str(target_csv), **dataset_kwargs
+        )
+        val_dataset = PairedModalDataset(
+            str(val_source_csv), str(val_target_csv), **dataset_kwargs
+        )
+        train_loader = DataLoader(
+            train_dataset, batch_size=config.batch_size, shuffle=True
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=config.batch_size, shuffle=False
+        )
+        print("[split] Using explicit train and validation datasets.")
+    else:
+        train_loader, val_loader, _ = get_paired_loaders(
+            str(source_csv), str(target_csv),
+            batch_size=config.batch_size,
+            source_size=args.source_size,
+            target_size=args.target_size,
+            heatmap_size=args.heatmap_size,
+            resize_shape=config.resize_shape,
+            out_channels=config.in_channels,
+            use_h5=True,
+            seed=args.seed,
+            preserve_spectral_order=args.preserve_spectral_order,
+            train_fraction=args.train_fraction,
+            val_fraction=args.val_fraction
+        )
     
     print(f"Train dataset size: {len(train_loader.dataset)}")
     print(f"Val dataset size: {len(val_loader.dataset)}")

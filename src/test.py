@@ -242,7 +242,12 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
             physical_params = physical_params.to(device) if physical_params is not None else None
             
             # 前向传播
-            recon, _, _ = model(source_batch, target_mode=target_mode_idx, physical_params=physical_params)
+            recon, _, _ = model(
+                source_batch,
+                target_mode=target_mode_idx,
+                physical_params=physical_params,
+                sample_latent=False,
+            )
             
             # 调试：检查输出范围
             if batch_idx == 0:
@@ -407,6 +412,8 @@ def main():
                        help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
                        help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--preserve_spectral_order', action='store_true',
+                       help='Directly reshape spectra without patch-wise reordering')
     parser.add_argument('--source_size', type=int, default=None,
                        help='Optional source spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--target_size', type=int, default=None,
@@ -515,7 +522,8 @@ def main():
             heatmap_size=args.heatmap_size,
             resize_shape=tuple(args.resize_shape),
             out_channels=1,
-            use_h5=True
+            use_h5=True,
+            preserve_spectral_order=args.preserve_spectral_order
         )
         test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
         print("Data split: using FULL dataset as test (no random_split).")
@@ -528,7 +536,8 @@ def main():
             heatmap_size=args.heatmap_size,
             resize_shape=tuple(args.resize_shape),
             out_channels=1,
-            seed=args.seed
+            seed=args.seed,
+            preserve_spectral_order=args.preserve_spectral_order
         )
         print("Data split: using random_split(test subset) to match training split.")
     

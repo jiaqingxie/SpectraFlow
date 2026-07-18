@@ -114,7 +114,14 @@ class CrossModalVAE(nn.Module):
             h = torch.clamp(h, 0, 1)
         return h
 
-    def forward(self, x, target_mode=0, physical_params=None, return_latent=False):
+    def forward(
+        self,
+        x,
+        target_mode=0,
+        physical_params=None,
+        return_latent=False,
+        sample_latent=True,
+    ):
         """
         前向传播
         
@@ -131,7 +138,7 @@ class CrossModalVAE(nn.Module):
             z: 潜在变量（如果return_latent=True）
         """
         mu, logvar = self.encode(x, physical_params)
-        z = self.reparameterize(mu, logvar)
+        z = self.reparameterize(mu, logvar) if sample_latent else mu
         recon = self.decode(z, target_mode)
         
         if return_latent:

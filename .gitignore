@@ -1,23 +1,40 @@
+# ---------------------------------------------------------------------------
+# SpectraFlow: track code + README only. Data, checkpoints, results, and the
+# LaTeX/PDF sources are intentionally excluded from the public code release.
+# ---------------------------------------------------------------------------
+
+# Datasets and raw/processed spectra (multi-GB; distributed via their sources)
+data/
+datasets/
+
+# Trained model weights and runtime outputs
+checkpoints/
+downstream/
+results/
+
+# Manuscript sources and build artifacts (not part of the code release)
+latex/
+
+# Standalone figure/image exports at repo root
+/*.png
+/*.pdf
+*.eps
+/*.svg
+
+# Keep README/documentation images
+!docs/
+!docs/**
+
+# Handoff / experiment scratch notes
+OPENSPECY_EXPERIMENT_HANDOFF.md
+
 # Local LaTeX toolchain (Tectonic binary, etc.)
 .tooling/
 
 # PDF edit backups / temp outputs
 *.bak
-*.new.pdf
-
-# PDF edit backups / temp outputs
 *.pdf.bak
 *.new.pdf
-
-# LaTeX build artifacts
-latex/*.aux
-latex/*.bbl
-latex/*.blg
-latex/*.log
-latex/*.out
-latex/*.synctex.gz
-latex/*.fls
-latex/*.fdb_latexmk
 
 # Python caches and virtual envs
 __pycache__/
@@ -25,10 +42,10 @@ __pycache__/
 .venv/
 venv/
 
-# Runtime data and outputs (point scripts at your own paths)
-data/
-checkpoints/
-downstream/
+# Editor / OS cruft
+.vscode/
+.DS_Store
+Thumbs.db
 
 # Accidental files from shell redirection
 /--data_dir

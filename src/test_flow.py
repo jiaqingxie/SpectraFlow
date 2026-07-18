@@ -440,7 +440,7 @@ def plot_comparison(original_list, reconstructed_list, save_dir, prefix,
 
 
 def test_modality_pair(model, test_loader, source_mode, target_mode, device, 
-                      save_dir='results', num_steps=100, use_rk4=True, dump_index=None,
+                      save_dir='results', num_steps=8, use_rk4=True, dump_index=None,
                       extra_metrics=True,
                       dtw_subsample=200,
                       dtw_window_ratio=0.12,
@@ -767,7 +767,7 @@ def test_modality_pair(model, test_loader, source_mode, target_mode, device,
 
 
 def generate_process_only(model, test_loader, source_mode, target_mode, device, 
-                          save_dir='results', num_steps=150, use_rk4=True, cmap='viridis'):
+                          save_dir='results', num_steps=8, use_rk4=True, cmap='viridis'):
     """
     快速生成Flow Matching过程可视化（只处理6个样本，不运行完整测试）
     """
@@ -845,7 +845,7 @@ def generate_process_only(model, test_loader, source_mode, target_mode, device,
 
 
 def generate_single_xt_example(model, test_loader, source_mode, target_mode, device,
-                               save_dir='results', num_steps=150, use_rk4=True, xt_t=0.5, cmap='viridis'):
+                               save_dir='results', num_steps=8, use_rk4=True, xt_t=0.5, cmap='viridis'):
     """
     仅生成单个样本的 source 与指定时刻 x_t 热图（1x2）
     """
@@ -924,6 +924,8 @@ def main():
                        help='Heatmap size (must be a perfect square, e.g., 3600=60x60, 1024=32x32)')
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
                        help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--preserve_spectral_order', action='store_true',
+                       help='Reshape spectra directly without patch-wise index reordering')
     parser.add_argument('--source_size', type=int, default=None,
                        help='Optional source spectrum length before heatmap (if None, uses heatmap_size)')
     parser.add_argument('--target_size', type=int, default=None,
@@ -935,7 +937,7 @@ def main():
     parser.add_argument('--use_split_test', action='store_true',
                        help='Force random_split and evaluate only the test subset, even when --source_csv/--target_csv is provided.')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
-    parser.add_argument('--num_steps', type=int, default=150, help='Number of ODE steps (default: 150, more steps = better quality)')
+    parser.add_argument('--num_steps', type=int, default=8, help='Number of ODE steps (fixed default: 8)')
     parser.add_argument('--use_rk4', action='store_true', help='Use RK4 ODE solver (more accurate but slower, default: True)')
     parser.add_argument('--no_rk4', action='store_true', help='Disable RK4 and use Euler method (faster but less accurate)')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
@@ -1082,7 +1084,8 @@ def main():
             heatmap_size=args.heatmap_size,
             resize_shape=tuple(args.resize_shape),
             out_channels=1,
-            use_h5=True
+            use_h5=True,
+            preserve_spectral_order=args.preserve_spectral_order
         )
         test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
         print("Data split: using FULL dataset as test (no random_split).")
@@ -1095,7 +1098,8 @@ def main():
             heatmap_size=args.heatmap_size,
             resize_shape=tuple(args.resize_shape),
             out_channels=1,
-            seed=args.seed
+            seed=args.seed,
+            preserve_spectral_order=args.preserve_spectral_order
         )
         print("Data split: using random_split(test subset) to match training split.")
     

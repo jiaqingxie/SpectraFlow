@@ -768,7 +768,7 @@ class ConditionalFlowMatching(nn.Module):
         
         return v_pred, v_true, x_t
     
-    def sample(self, x0, target_mode=None, num_steps=50, return_path=False, use_rk4=False):
+    def sample(self, x0, target_mode=None, num_steps=8, return_path=False, use_rk4=False):
         """
         从源光谱生成目标光谱（推理时）
         支持Euler方法和RK4方法

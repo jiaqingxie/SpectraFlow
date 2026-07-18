@@ -27,7 +27,7 @@ python src/train_flow.py \
   --dit_num_heads 6 \
   --use_mixed_loss \
   --gen_loss_weight 0.5 \
-  --gen_loss_prob 0.25 \
+  --gen_loss_prob 0.1 \
   --train_gen_steps 8 \
   --val_num_steps 8
 ```
@@ -93,7 +93,7 @@ python src/train_flow.py \
   --dit_patch_size 4 \
   --use_mixed_loss \
   --gen_loss_weight 0.5 \
-  --gen_loss_prob 0.25 \
+  --gen_loss_prob 0.1 \
   --train_gen_steps 8 \
   --val_num_steps 8
 ```

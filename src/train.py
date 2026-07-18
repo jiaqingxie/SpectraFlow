@@ -34,7 +34,7 @@ class PairedModalDataset(Dataset):
     """
     def __init__(self, source_csv, target_csv, source_size=None, target_size=None, 
                  heatmap_size=3600, resize_shape=(60, 60), 
-                 out_channels=1, use_h5=True):
+                 out_channels=1, use_h5=True, preserve_spectral_order=False):
         # 优先使用HDF5格式（如果存在且启用）
         source_h5 = source_csv.replace('.csv', '.h5')
         target_h5 = target_csv.replace('.csv', '.h5')
@@ -76,6 +76,12 @@ class PairedModalDataset(Dataset):
         self.heatmap_size = heatmap_size
         self.resize_shape = resize_shape
         self.out_channels = out_channels
+        self.preserve_spectral_order = preserve_spectral_order
+        if np.prod(self.resize_shape) != self.heatmap_size:
+            raise ValueError(
+                f"resize_shape={self.resize_shape} does not contain "
+                f"heatmap_size={self.heatmap_size} points"
+            )
         
         # 处理源模态数据：先插值到source_size，再插值到heatmap_size用于热图转换
         self.source_interpolated_original = [self._interpolate(spec, self.source_size) for spec in self.source_data]
@@ -127,6 +133,8 @@ class PairedModalDataset(Dataset):
     def _spectrum_to_heatmap(self, spectrum_1d, min_val, max_val):
         """转换为热图"""
         norm = (spectrum_1d - min_val) / (max_val - min_val + 1e-8)
+        if self.preserve_spectral_order:
+            return np.expand_dims(norm.reshape(self.resize_shape), axis=0)
         side = int(math.sqrt(len(norm)))
         patch_size = max(p for p in [10, 8, 5, 4, 2, 1] if side % p == 0)
         num_patches_per_row = side // patch_size
@@ -226,7 +234,11 @@ class CrossModalVAETrainer:
             print("[DEBUG] physical_params has NaN/Inf before forward")
 
         # 前向传播（融合物理参数）
-        recon, mu, logvar = self.model(source_batch, target_mode=target_mode_idx, physical_params=physical_params)
+        recon, mu, logvar = self.model(
+            source_batch,
+            target_mode=target_mode_idx,
+            physical_params=physical_params,
+        )
         
         # 调试：检查中间值
         if torch.isnan(recon).any() or torch.isinf(recon).any():
@@ -280,7 +292,12 @@ class CrossModalVAETrainer:
         physical_params = physical_params.to(self.device) if physical_params is not None else None
         target_mode_idx = self.mode_map[target_mode]
         
-        recon, mu, logvar = self.model(source_batch, target_mode=target_mode_idx, physical_params=physical_params)
+        recon, mu, logvar = self.model(
+            source_batch,
+            target_mode=target_mode_idx,
+            physical_params=physical_params,
+            sample_latent=False,
+        )
         
         recon_loss = reconstruction_loss(recon, target_batch)
         
@@ -311,7 +328,9 @@ class CrossModalVAETrainer:
 
 
 def get_paired_loaders(source_csv, target_csv, batch_size=32, source_size=None, target_size=None,
-                      heatmap_size=3600, resize_shape=(60, 60), out_channels=1, use_h5=True, seed=42):
+                      heatmap_size=3600, resize_shape=(60, 60), out_channels=1, use_h5=True,
+                      seed=42, preserve_spectral_order=False,
+                      train_fraction=0.7, val_fraction=0.15):
     """
     获取配对数据加载器
     
@@ -334,12 +353,22 @@ def get_paired_loaders(source_csv, target_csv, batch_size=32, source_size=None, 
         heatmap_size=heatmap_size,
         resize_shape=resize_shape,
         out_channels=out_channels,
-        use_h5=use_h5
+        use_h5=use_h5,
+        preserve_spectral_order=preserve_spectral_order
     )
     
-    train_size = int(0.7 * len(dataset))
-    val_size = int(0.15 * len(dataset))
+    if not 0.0 < train_fraction < 1.0:
+        raise ValueError("train_fraction must be strictly between 0 and 1")
+    if not 0.0 < val_fraction < 1.0:
+        raise ValueError("val_fraction must be strictly between 0 and 1")
+    if train_fraction + val_fraction > 1.0:
+        raise ValueError("train_fraction + val_fraction must not exceed 1")
+
+    train_size = int(train_fraction * len(dataset))
+    val_size = int(val_fraction * len(dataset))
     test_size = len(dataset) - train_size - val_size
+    if train_size == 0 or val_size == 0:
+        raise ValueError("Dataset is too small for the requested train/validation fractions")
     
     # 使用固定的随机种子确保训练和测试时的分割一致
     generator = torch.Generator().manual_seed(seed)
@@ -425,6 +454,10 @@ def main():
                        help='Directory containing processed CSV files')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+    parser.add_argument('--train_fraction', type=float, default=0.7,
+                       help='Fraction of the provided training file used for optimization')
+    parser.add_argument('--val_fraction', type=float, default=0.15,
+                       help='Fraction of the provided training file used for validation')
     parser.add_argument('--learning_rate', type=float, default=4e-4, help='Learning rate')
     parser.add_argument('--beta_max', type=float, default=0.001, help='Max KL weight')
     parser.add_argument('--latent_dim', type=int, default=128, help='Latent dimension')
@@ -435,6 +468,8 @@ def main():
                             'By default, if --data_dir path contains "qm9s", checkpoints will be saved under save_dir/qm9s/.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
+    parser.add_argument('--cpu_threads', type=int, default=None,
+                       help='Limit PyTorch CPU threads while training')
     parser.add_argument('--modes', nargs='+', default=['ir', 'uv', 'raman'],
                        help='Modalities to train')
     parser.add_argument('--source_size', type=int, default=None,
@@ -445,6 +480,8 @@ def main():
                        help='Heatmap size for model input/output (must be perfect square, default 3600=60x60)')
     parser.add_argument('--resize_shape', type=int, nargs=2, default=[60, 60],
                        help='Heatmap reshape size, e.g., 60 60 or 32 32')
+    parser.add_argument('--preserve_spectral_order', action='store_true',
+                       help='Directly reshape spectra without patch-wise reordering')
     parser.add_argument('--source_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
                        help='Optional: train a single modality pair (source). If set, must also set --target_mode.')
     parser.add_argument('--target_mode', type=str, default=None, choices=['ir', 'uv', 'raman'],
@@ -454,6 +491,10 @@ def main():
     parser.add_argument('--target_csv', type=str, default=None,
                        help='Optional: custom target CSV filename (or absolute path). Only used when training a single pair.')
     args = parser.parse_args()
+
+    if args.cpu_threads is not None:
+        torch.set_num_threads(args.cpu_threads)
+        torch.set_num_interop_threads(max(1, min(args.cpu_threads, 4)))
 
     # If training on qm9s, save checkpoints into a separate subfolder to avoid collisions with other runs.
     # Users can disable this behavior via --no_dataset_subdir or fully override via --save_dir.
@@ -586,7 +627,10 @@ def main():
             resize_shape=config.resize_shape,
             out_channels=config.in_channels,
             use_h5=True,  # 启用HDF5优先加载
-            seed=args.seed
+            seed=args.seed,
+            preserve_spectral_order=args.preserve_spectral_order,
+            train_fraction=args.train_fraction,
+            val_fraction=args.val_fraction
         )
         
         # 训练

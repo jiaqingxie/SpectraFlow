@@ -21,7 +21,7 @@ from train import PairedModalDataset, get_paired_loaders
 
 
 def test_and_save_detailed(model, test_loader, source_mode, target_mode, device, 
-                          save_dir='results', num_steps=150, use_rk4=True,
+                          save_dir='results', num_steps=8, use_rk4=True,
                           save_intermediate_t=None, num_intermediate_samples=5):
     """
     测试模型并保存详细的预测值、真实值和源值，以及中间时刻的结果
@@ -292,7 +292,7 @@ def main():
     parser.add_argument('--no_split', action='store_true',
                        help='Do not split dataset; treat the whole provided CSV/H5 as the test set')
     parser.add_argument('--save_dir', type=str, default='results', help='Results directory')
-    parser.add_argument('--num_steps', type=int, default=150, help='Number of ODE steps')
+    parser.add_argument('--num_steps', type=int, default=8, help='Number of ODE steps (fixed default: 8)')
     parser.add_argument('--use_rk4', action='store_true', help='Use RK4 ODE solver')
     parser.add_argument('--no_rk4', action='store_true', help='Disable RK4 and use Euler method')
     parser.add_argument('--cpu', action='store_true', help='Use CPU instead of GPU')
