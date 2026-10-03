@@ -1,341 +1,347 @@
 # SpectraFlow
 
-**Spectroscopy-informed Flow Matching for Bidirectional Infrared–Raman Spectral Translation**
+**Spectroscopy-informed flow matching for bidirectional IR–Raman translation**
 
 ![SpectraFlow overview](docs/figure1_overview.png)
 
-SpectraFlow recasts infrared (IR) ↔ Raman spectral translation as a continuous
-transport problem. Instead of a direct point-wise regression, it learns a
-conditional velocity field with **flow matching** and integrates a deterministic
-ODE from the source spectrum to the paired target modality. The velocity field
-is a **wavenumber-aware 1D Diffusion Transformer (SpectraDiT)**, and training is
-regularized by **spectroscopy-informed** losses that emphasize peaks, edges, and
-sharp features.
+This release includes the training/evaluation code, the manuscript LaTeX source,
+audited Results figures, numerical figure inputs and reproducibility scripts.
+**Checkpoints and full datasets are not included.** Supply your own weights using
+the filenames and task configuration below, or train new models.
 
-Because the prediction is produced by integrating an ODE, every intermediate
-state along the trajectory is an inspectable spectrum, and the internal
-representation at an intermediate flow time doubles as a transferable molecular
-embedding for downstream property prediction.
+The model learns a conditional velocity field between paired, normalized spectra
+and predicts the target using deterministic ODE integration. Intermediate states
+are numerical model states; they are not measured vibrational dynamics. The
+spectral losses are inductive biases, not quantum-mechanical selection rules.
 
-> **Scope of this repository.** This repository contains **code and this
-> README only**. Datasets, trained checkpoints, generated results, and the
-> manuscript/PDF are intentionally **not** tracked (see `.gitignore`); obtain the
-> datasets from their original sources listed at the bottom of this page.
+## Reproduction status
 
----
+The audit is tied to Overleaf commit `b42f38bdc48aa32b04a250409a0ef2df00a43508`.
+The manuscript in [`latex/`](latex/) is that draft, preserved for traceability.
+Read [`REPRODUCIBILITY_AUDIT.md`](REPRODUCIBILITY_AUDIT.md) for the evidence and
+known differences between the manuscript and executable protocols.
 
-## Table of contents
+| Evidence | Verified scope |
+|---|---|
+| Principal SpectraDiT checkpoints | Six weights strictly loaded; 32 samples per model; 48 archived spectral anchors matched within 1e-4 normalized absolute tolerance |
+| Saved prediction metrics | Full numerical recalculation of 260,386 principal/OOD target–prediction pairs; this is distinct from fresh inference |
+| RRUFF experimental checkpoint | All 147 external pairs freshly inferred; physical-order restoration and AsLS baseline correction checked |
+| Corrected NIST subset | 33 available identity-correct rows freshly inferred; most molecular identities are in the QM9S training partition |
+| Four training seeds / full principal inference | Not established by the current archived weights and completed audit |
+| New reviewer experiments | Preparation and matched-training code provided; training/robustness/calibration results are not claimed complete |
 
-1. [Method highlights](#method-highlights)
-2. [Repository structure](#repository-structure)
-3. [Installation](#installation)
-4. [Data preparation](#data-preparation)
-5. [Training](#training)
-6. [Evaluation](#evaluation)
-7. [SpectraDiT-Direct ablation](#spectradit-direct-ablation)
-8. [Downstream representation probing](#downstream-representation-probing)
-9. [Analysis and figures](#analysis-and-figures)
-10. [Reproducing the paper](#reproducing-the-paper)
-11. [Default hyperparameters](#default-hyperparameters)
-12. [Datasets and third-party resources](#datasets-and-third-party-resources)
-13. [Citation](#citation)
+The original 84-pair NIST identity matching is invalid and is excluded from the
+new figures. The old principal preprocessing permutes local wavenumber adjacency;
+existing weights must retain that preprocessing. Ordered retraining is a separate
+experiment. The archived QM9 OOD output evaluates 4,004 rows, whereas the supplied
+test file contains 26,687 rows; the evaluator exposes both protocols explicitly.
 
----
+## Repository contents
 
-## Method highlights
-
-- **Conditional flow matching** for spectrum-to-spectrum generation, trained with
-  a straight-line (optimal-transport) interpolation and a constant target
-  velocity.
-- **Wavenumber-aware 1D SpectraDiT backbone** (`--backbone vibradit`): the
-  spectral map is flattened into an ordered wavenumber sequence, divided into
-  patches, and processed with self-attention and adaLN-Zero conditioning on flow
-  time, target modality, and source spectrum.
-- **Spectroscopy-informed objective**: a weighted elastic (L1/L2) velocity loss
-  with amplitude / gradient / curvature importance weighting, plus endpoint
-  derivative-shape, local optimal-transport, and non-negativity penalties.
-- **Deterministic ODE sampling** with Euler (default, 8 steps) or RK4 solvers;
-  the full trajectory can be exported for visualization.
-- **Baselines** for fair comparison: a convolutional conditional VAE and a
-  patch-token **Transformer** translator.
-- **SpectraDiT-Direct** ablation: the same SpectraDiT network used for one-pass
-  residual prediction (NFE = 1, no ODE integration), isolating backbone capacity
-  from iterative transport.
-
-## Repository structure
-
-```
-SpectraFlow/
-├── src/
-│   ├── model_flow.py        # ConditionalFlowMatching + backbones (unet/dit/vibradit)
-│   ├── train_flow.py        # Flow-matching training entry point
-│   ├── test_flow.py         # Evaluation (MAE/RMSE/R²/Pearson/PSNR/SSIM/JSD, peaks, DTW)
-│   ├── train_direct.py      # SpectraDiT-Direct one-pass residual baseline
-│   ├── model.py / train.py / test.py            # Conditional VAE baseline
-│   ├── model_seq2seq.py / train_seq2seq.py      # Patch-Transformer baseline (train)
-│   ├── test_transformer.py                      # Patch-Transformer evaluation
-│   ├── process.py           # QM9S CSV -> processed spectra (CSV/H5)
-│   ├── process_qme14s.py    # QMe14S ingestion
-│   ├── merge_vibench_test_h5.py                 # Build paired ViBench test sets
-│   ├── extract_flow_embeddings_and_properties.py# Flow embeddings + RDKit labels
-│   ├── train_downstream.py  # Linear/RF probes on features
-│   ├── evaluate_peak_resolved_spectra.py        # Peak-resolved fidelity metrics
-│   ├── plot_bidirectional_peak_resolved_summary.py
-│   └── export_test_smiles.py                    # Export test-split SMILES
-├── vibradit_flow.py         # Single-file standalone VibraDiT-Flow implementation
-├── analyze_scaffold_performance.py              # Per-scaffold R² breakdown
-├── build_scaffold_r2_barplots.py                # Scaffold-class R² bar plots
-├── build_fig4_embedding_umap*.py                # UMAP embedding figures
-├── build_vibench_ood_downstream_plots.py        # OOD downstream summary plots
-├── visualize_flow_matching.py                   # Flow-trajectory illustration
-├── run_qm9s_direct.sh       # Launcher for the Direct ablation
-├── docs/figure1_overview.png
-├── requirements.txt
-└── README.md
+```text
+src/                           models, training, evaluation, data preparation
+src/reproduce_paper_checkpoints.py
+src/audit_paper_reproducibility.py
+src/audit_experimental_pairing.py
+src/redraw_audited_results.py
+src/export_reproduction_figure_bundle.py
+src/reviewer_experiments/       new fixed-group-split / matched-training framework
+configs/                       explicit task paths and training profiles
+figures/reproduction/          four audited Results figures: PDF, SVG, 300 dpi PNG
+figures/reproduction/source_bundle/  compact numeric inputs, without model weights
+reproduction_audit/             completed numerical evidence and provenance
+latex/                         full manuscript source, bibliography and figure assets
+elucidation/                   optional spectrum-to-SMILES research module
+run_reproduction_audit_gpu.sh   chemagent_gpu_pool worker launcher
 ```
 
-> `data/`, `datasets/`, `checkpoints/`, and `results/` are created at runtime and
-> are not tracked. Point the scripts at your own data locations via `--data_dir`.
+Existing peak-resolved analysis, scaffold plots, UMAP, downstream summaries and
+experimental figure scripts remain in `src/` and at the repository root.
+Scaffold-class plots summarize subgroups; they do not establish scaffold-disjoint
+generalization. The optional elucidation module is not part of the verified paper
+benchmark and its weights are excluded.
 
 ## Installation
+
+Use Python 3.10 or later. The checkpoint audit used Python 3.10 and
+PyTorch 2.6.0 with CUDA 12.4; the recorded numerical versions are in
+[`requirements-reproduction.txt`](requirements-reproduction.txt).
 
 ```bash
 git clone https://github.com/jiaqingxie/SpectraFlow.git
 cd SpectraFlow
-
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-RDKit is installed via pip (`rdkit`). If you prefer conda, use
-`conda install -c conda-forge rdkit` and install the remaining packages with pip.
-A CUDA-enabled PyTorch build is recommended for training; install the matching
-wheel from [pytorch.org](https://pytorch.org) for your CUDA version.
+For the recorded numerical stack, use `pip install -r requirements-reproduction.txt`.
+Install a CUDA-enabled PyTorch 2.6.0 build appropriate for the worker. Raw LMDB
+or Parquet ingestion additionally uses `requirements-raw-data.txt`. UMAP is an
+optional dependency for the original representation figures. R-based OpenSpecy
+preparation requires R and the packages used by `src/prepare_openspecy_benchmark.R`.
 
-## Data preparation
-
-SpectraFlow trains on paired IR/Raman spectra from three benchmarks:
-
-| Dataset  | Molecules | Spectral length `L` | Map size | Role |
-|----------|-----------|---------------------|----------|------|
-| QM9S     | 129,817   | 3600                | 60×60    | In-distribution |
-| QMe14S   | 186,102   | 3600                | 60×60    | Larger / more diverse in-distribution |
-| ViBench  | 129,218   | 1024                | 32×32    | Multi-domain benchmark; OOD generalization |
-
-The data pipeline expects each spectrum resampled to a fixed length (`3600` for
-QM9S/QMe14S, `1024` for ViBench) and reshaped into a square single-channel map.
-Every spectrum is min–max normalized per sample.
-
-**QM9S** — from raw broadened CSVs (rows = spectra, first row = wavenumber axis):
+## Redraw the new Results figures without weights or full datasets
 
 ```bash
-python src/process.py \
-  --data_dir /path/to/qm9s_raw \
-  --output_dir data/processed \
-  --h5_only
+python src/redraw_audited_results.py \
+  --source-bundle figures/reproduction/source_bundle \
+  --output-dir figures/redrawn
 ```
 
-This produces `data/processed/{ir,uv,raman}_broaden_processed.h5`.
+This produces all four figure families in PDF, SVG and 300 dpi PNG, plus source
+tables and captions. [`figure_manifest.json`](figures/reproduction/figure_manifest.json)
+states the provenance and example-selection rules. The compact bundle contains
+four quantile-selected QM9S curves, the restored RRUFF evaluation arrays and
+aggregate metric/probe tables. It contains no neural-network weights.
 
-**QMe14S** — use `src/process_qme14s.py` with the QMe14S source files.
+| Figure | Numerical content |
+|---|---|
+| [Results 1](figures/reproduction/result_1_translation.pdf) | Principal saved seed-2 means and individual archived OOD comparisons; no unverified seed error bars |
+| [Results 2](figures/reproduction/result_2_quantile_examples.pdf) | Examples nearest the 50th/90th nMAE percentiles of the full saved QM9S test results |
+| [Results 3](figures/reproduction/result_3_downstream.pdf) | Five-split ridge summaries and signed Flow+fingerprint gains, including decreases |
+| [Results 4](figures/reproduction/result_4_rruff_external.pdf) | All 147 RRUFF pairs and explicitly selected high-correlation examples |
 
-**ViBench** — merge the released per-domain test H5 files into paired
-IR/Raman sets with `src/merge_vibench_test_h5.py`.
+To regenerate the compact bundle from the original local numerical artifacts:
 
-To obtain the SMILES aligned to the exact test-split row order (needed for
-scaffold and downstream analysis), use `src/export_test_smiles.py`.
+```bash
+python src/export_reproduction_figure_bundle.py
+```
 
-## Training
+That export requires the archived `results/`, processed QM9S HDF5 and audit tables.
+The redraw command above only requires the published compact bundle. Figure
+styling follows Chen Liu's
+[scientific-figure-making skill](https://github.com/ChenLiu-1996/figures4papers/tree/main/scientific-figure-making).
 
-### SpectraFlow (VibraDiT-Flow)
+## Data layout and identity metadata
 
-QM9S, IR → Raman (matches the paper configuration):
+Obtain complete datasets from their original sources. Paths in
+[`configs/checkpoint_tasks.json`](configs/checkpoint_tasks.json) are relative to
+the repository root; edit them to use another storage layout.
+
+| Input | Expected path / local processed size |
+|---|---|
+| QM9S | `data/processed/{ir,raman}_broaden_processed.h5`; 129,817 rows × 3600 points |
+| QMe14S | `../data/QMe14S/processed/{ir,raman}_broaden_processed.h5`; 186,102 rows × 3600 points |
+| ViBench-Full | `data/processed/vibench_test_full_{ir,raman}_processed.h5`; locally merged 91,949 rows × 1024 points |
+| ViBench domains | `data/processed/{domain}_test_{ir,raman}_processed.h5`, including source-domain `qm9` |
+| RRUFF | `datasets/openspecy_rruff_576/{train,test}_{ir,raman}.h5` and aligned `*_pairs.csv` |
+| QM9S molecular identity | Original `../data/qm9s/mapping.txt`, IDs 1…129817 in the HDF5 row order |
+| QMe14S identity | `data/processed/qme14s_id_smiles.csv`, with sequential `row_index` |
+| ViBench identity | Aligned `{domain}_test_{ir,raman}_smiles.txt` lists |
+
+HDF5 files contain `spectra` (N × L) and `x_axis` (L). Source and target rows must
+represent the same identity; shape equality alone does not validate identity.
+The audit found 256 all-zero QMe14S test rows excluded by the old evaluator; all
+compared methods must apply the same declared quality rule and denominator.
+
+The raw-data parent used by identity/audit scripts can be changed without editing
+code:
+
+```bash
+export SPECTRAFLOW_RAW_DATA_ROOT=/path/to/raw-data
+```
+
+Its default is `../data` relative to the checkout. For raw preparation, use
+`src/process.py`, `src/process_qme14s.py`, `src/process_all_lmdb.py` and
+`src/merge_vibench_test_h5.py`. Do not substitute QMe14S `IR_broaden.zip` metadata
+for QM9S molecular identities.
+
+## Checkpoint configuration and fresh inference
+
+No `.pt`, `.pth`, `.ckpt` or safetensors files are tracked. Expected names:
+
+| Model | Weight path |
+|---|---|
+| Principal Flow | `checkpoints/{qm9s,qme14s,vibench}/flow_{ir2raman,raman2ir}_vibradit_best_seed2.pt` |
+| OOD Flow | `checkpoints/vibench_ood/flow_{direction}_vibradit_best_seed{0,1}.pt` |
+| Existing Direct | `checkpoints/qm9s_direct/direct_{direction}_vibradit_best_seed2.pt` |
+| Experimental RRUFF | `checkpoints/openspecy_rruff_576_ordered_p1/flow_ir2raman_vibradit_best_seed42.pt` |
+
+These are naming/path conventions, not download links. Original pretrained
+weights are not distributed by this commit. Width, depth and patch size are
+inferred from checkpoint tensors and strictly checked on load. Attention-head
+count cannot be inferred from tensor shapes: pass the original run's value using
+`--heads`; the documented profile uses 6, and original OOD configuration provenance
+still needs confirmation.
+
+```bash
+python src/reproduce_paper_checkpoints.py \
+  --task-config configs/checkpoint_tasks.json --list-tasks
+
+python src/reproduce_paper_checkpoints.py \
+  --task-config configs/checkpoint_tasks.json \
+  --suite id --device cuda --heads 6 --steps 8 \
+  --output-dir results/checkpoint_reproduction/id
+
+python src/reproduce_paper_checkpoints.py \
+  --task-config configs/checkpoint_tasks.json \
+  --suite ood --protocol paper --device cuda --heads 6 \
+  --output-dir results/checkpoint_reproduction/ood_full
+```
+
+`--protocol archived` reproduces the old QM9 OOD re-split; `paper` evaluates the
+supplied OOD files in full. `--limit 32` is a labeled subset check, not a full-test
+estimate. Evaluation saves every selected HDF5 row ID, per-molecule metrics,
+checkpoint SHA256, solver settings and a first-batch prediction archive. It does
+not save all predicted spectra. Principal archived anchors are compared when the
+original saved predictions are available.
+
+CUDA is the default and fails explicitly if unavailable. A CPU fallback must be
+requested with `--device cpu --threads 32`; do not compare CPU timing with GPU
+timing. Native-intensity errors use reference target extrema for evaluation.
+With an absent target modality, the model predicts normalized shape unless an
+independent intensity calibration is available.
+
+The main checkpoint tensor shapes observed in the audit are:
+
+| Dataset | Width / blocks | Patch size, IR→Raman / Raman→IR | Input order |
+|---|---|---|---|
+| QM9S | 384 / 8 | 20 / 20 | Legacy patch permutation |
+| QMe14S | 384 / 8 | 20 / 20 | Legacy patch permutation |
+| ViBench-Full | 384 / 8 | 20 / 16 | Legacy patch permutation |
+| Experimental RRUFF | 384 / 8 | 4 / — | Physical wavenumber order |
+
+These observed shapes take precedence over assuming one patch size for every
+archived run. The full original training configuration is not stored in most
+principal checkpoints.
+
+## GPU pool launcher
+
+Run from a terminal authenticated for the workload pool:
+
+```bash
+REPRO_PYTHON=/path/to/cuda-env/bin/python \
+  bash run_reproduction_audit_gpu.sh \
+  --task-config configs/checkpoint_tasks.json --suite id
+```
+
+The launcher requests 8 CPU cores, 1 GPU, 80000 MiB memory and
+`--charged-group=chemagent_gpu_pool`, with the shared `xiejiaqing` GPFS mount.
+`REPRO_CPUS`, `REPRO_CHARGED_GROUP` and `REPRO_PYTHON` override the defaults.
+Authentication remains the responsibility of the invoking terminal.
+
+## Explicit training profiles
+
+[`configs/training_defaults.json`](configs/training_defaults.json) records the
+profiles below. They are explicit run settings, not a claim that every archived
+checkpoint was trained with all the same settings.
+
+| Parameter | Principal/new matched-training profile |
+|---|---|
+| SpectraDiT width / blocks / heads | 384 / 8 / 6 |
+| Optimizer / learning rate | Adam / 2e-4, cosine decay |
+| Batch size / gradient clipping | 32 / 1.0 |
+| New QM9S/QMe14S/ViBench training budget | 100 epochs; also compare a separately declared equal-training-time budget |
+| Velocity L1/L2 mixture | 0.6 / 0.4 |
+| Amplitude / gradient / curvature weighting | 1.0 / 0.5 / 0.5 |
+| Endpoint / shape / local OT coefficients | 0.5 / 0.05 / 0.02 |
+| Endpoint sampling probability / OT window | 0.1 / 64 points |
+| Endpoint training / inference solver | Euler, 8 network evaluations |
+| New data split / initialization seeds | Fixed split seed 2; initialization seeds 0, 1, 2, 3 |
+
+The old nonnegative loss is zero after output projection; no independent benefit
+is attributed to it. Increasing endpoint probability to 0.5 changes sampling
+frequency, while inverse-probability weighting keeps the expected coefficient
+fixed. A deterministic paired straight-line path is used; `sigma_min` is retained
+as a compatibility argument and does not add noise in this implementation.
+
+For an explicitly configured legacy-order QM9S training run:
 
 ```bash
 python src/train_flow.py \
-  --data_dir data/processed \
-  --save_dir checkpoints \
-  --source_mode ir --target_mode raman \
+  --data_dir data/processed --save_dir checkpoints/qm9s \
+  --no_dataset_subdir --source_mode ir --target_mode raman \
   --heatmap_size 3600 --resize_shape 60 60 \
-  --batch_size 64 --epochs 100 --learning_rate 2e-4 --seed 1 \
-  --backbone vibradit \
-  --dit_patch_size 20 --dit_hidden_dim 384 --dit_depth 8 --dit_num_heads 6 \
+  --batch_size 32 --epochs 100 --learning_rate 2e-4 --seed 2 \
+  --backbone vibradit --dit_patch_size 20 --dit_hidden_dim 384 \
+  --dit_depth 8 --dit_num_heads 6 \
   --use_mixed_loss --gen_loss_weight 0.5 --gen_loss_prob 0.1 \
   --train_gen_steps 8 --val_num_steps 8
 ```
 
-Notes:
-- `--backbone vibradit` automatically enables the spectroscopy-informed spectral
-  losses (`--lambda_shape 0.05`, `--lambda_ot 0.02`, `--lambda_pos 0.01`).
-- `--gen_loss_prob` is the endpoint-consistency probability `p` (paper ablates
-  `0.1` vs `0.5`; `0.1` is the default setting).
-- The best checkpoint (lowest validation reconstruction loss) is written as
-  `flow_{src}2{tgt}_vibradit_best_seed{seed}.pt`.
-- Reverse direction: swap `--source_mode raman --target_mode ir`.
+`--preserve_spectral_order` changes preprocessing and must be used consistently
+for newly trained models and their evaluation. Do not apply it to existing
+legacy-order weights. The original loader's `--seed` controls both splitting and
+model initialization; use the new framework below for fixed-split seed studies.
+Checkpoint selection minimizes validation `0.6*MAE + 0.4*MSE`.
 
-### Baselines
+## New independent splits and matched Flow/Direct training
 
-VAE:
-
-```bash
-python src/train.py --data_dir data/processed \
-  --source_mode ir --target_mode raman \
-  --latent_dim 128 --beta_max 1e-3 --batch_size 32 --learning_rate 4e-4
-```
-
-Patch-token Transformer:
+The framework is preparatory code; the proposed experiment matrix has not been
+completed. It checks aligned metadata, declares constant/nonfinite-spectrum
+exclusions, and partitions entire identities/scaffolds/RRUFF IDs/mineral names.
+Its new protocol is separate from the archived paper's random split.
 
 ```bash
-python src/train_seq2seq.py --data_dir data/processed \
-  --source_mode ir --target_mode raman \
-  --hidden_dim 256 --depth 6 --patch_size 4 \
-  --batch_size 32 --learning_rate 4e-4 --epochs 50
+python src/complete_reviewer_experiments.py prepare
+python src/complete_reviewer_experiments.py train \
+  --run qm9s_identity_ir2raman_flow_full_seed0 --device cuda
+python src/complete_reviewer_experiments.py train \
+  --run qm9s_identity_ir2raman_direct_full_seed0 --device cuda
+python src/complete_reviewer_experiments.py train \
+  --run qm9s_identity_ir2raman_flow_full_seed0 --device cuda --resume
 ```
 
-## Evaluation
+Preparation requires all datasets and identity files in the layout above,
+including OpenSpecy material metadata at `datasets/openspecy_cov100/metadata.csv`.
+Splits, configs and generated weights go to the ignored root
+`reviewer_experiments/` directory. Group assignment uses deterministic SHA256
+thresholds with expected 70% train, 10% validation, 5% calibration, 15% test;
+large scaffold groups can change the achieved fractions. Acyclic compounds are
+grouped by their element-agnostic full graph topology rather than one empty
+Murcko scaffold.
+
+Flow and Direct share architecture, initialization, batch order, projected
+endpoint losses and checkpoint-selection metric. Runs save split/code hashes,
+optimizer/RNG states, update counts, examples seen and synchronized training time.
+Use `--budget-seconds VALUE` for a separate equal-training-time comparison;
+equal update counts are not equal compute. Available Flow variants include
+`no_peak`, `no_shape`, `no_ot`, `basic` and `legacy_order`. Robustness, NFE curves,
+downstream-use experiments and uncertainty calibration remain outstanding.
+
+## Other analyses and manuscript build
+
+- Baselines: `src/train.py`, `src/train_seq2seq.py`, `src/train_direct.py`;
+  the existing shorter-budget Direct result does not isolate integration alone.
+- Peak fidelity: `src/evaluate_peak_resolved_spectra.py` and
+  `src/plot_bidirectional_peak_resolved_summary.py`.
+- Properties: `src/extract_flow_embeddings_and_properties.py`,
+  `src/train_downstream.py`, `run_vibench_ood_downstream.sh` and UMAP scripts.
+  Probes are fitted separately in each domain; this is not zero-shot property prediction.
+- Experimental data: OpenSpecy pairing/repeatability scripts and
+  `src/audit_experimental_pairing.py`.
+- Corrected NIST matching: `src/build_nist_qm9s_overlap.py` requires
+  `--qm9s-mapping-txt`; the invalid ZIP-based matching interface was removed.
+- Manuscript: follow [`latex/README.md`](latex/README.md) to build the complete
+  draft from the included source and figures. The compiled
+  [archived draft PDF](latex/manuscript_snapshot.pdf) is also included.
+
+To audit existing saved numerical artifacts without neural inference:
 
 ```bash
-python src/test_flow.py \
-  --data_dir data/processed \
-  --checkpoint_dir checkpoints \
-  --source_mode ir --target_mode raman \
-  --heatmap_size 3600 --resize_shape 60 60 \
-  --batch_size 32 --seed 1 \
-  --backbone vibradit \
-  --dit_patch_size 20 --dit_hidden_dim 384 --dit_depth 8 --dit_num_heads 6 \
-  --save_dir results/qm9s_flow_ir2raman \
-  --no_rk4
+python src/audit_paper_reproducibility.py \
+  --output-dir results/audit \
+  --recompute results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2
+python src/audit_experimental_pairing.py
 ```
 
-`test_flow.py` reports MAE, RMSE, R², and Pearson `r`, and (with extended
-metrics) PSNR, SSIM, Jensen–Shannon distance, band-constrained DTW, and
-peak-matching errors. Evaluation uses `8` ODE steps by default; drop `--no_rk4`
-to switch to the RK4 solver. `test_transformer.py` and `test.py` evaluate the
-Transformer and VAE baselines with the same metrics.
+The first command requires the archived predictions for recalculation; the
+second requires the original identity mapping, raw metadata and saved experimental
+artifacts. Published audit files already document completed checks.
 
-Peak-resolved fidelity (peak recall/precision, position error, matched-peak
-intensity correlation) from saved predictions:
+## Dataset attribution
 
-```bash
-python src/evaluate_peak_resolved_spectra.py \
-  --preds results/qm9s_flow_ir2raman/predictions.csv \
-  --targets results/qm9s_flow_ir2raman/targets.csv \
-  --output_dir results/qm9s_peak_resolved
-```
+Full spectra and pretrained models must be obtained separately. The compact
+figure bundle contains selected numerical figure inputs with provenance, not the
+complete third-party datasets. Cite and follow each resource's distribution terms:
 
-## SpectraDiT-Direct ablation
+- [QM9S](https://figshare.com/articles/dataset/QM9S_dataset/24235333).
+- QMe14S: Yuan et al., QMe14S dataset release (2025); see the manuscript bibliography.
+- [ViBench / Vib2Mol](https://arxiv.org/abs/2503.07014).
+- [NIST Chemistry WebBook](https://webbook.nist.gov/chemistry/), SRD 69.
+- [OpenSpecy](https://doi.org/10.1021/acs.analchem.1c00123).
+- [RRUFF](https://rruff.info/), mineral spectral records.
 
-`train_direct.py` reuses the exact SpectraDiT velocity network but predicts the
-endpoint residual in a single evaluation (NFE = 1, no ODE solver), isolating the
-backbone from iterative transport:
-
-```bash
-SOURCE_MODE=ir TARGET_MODE=raman EPOCHS=50 BATCH_SIZE=32 ./run_qm9s_direct.sh
-```
-
-Checkpoints are saved with a `direct_` prefix and therefore cannot overwrite the
-Flow checkpoints. Swap `SOURCE_MODE`/`TARGET_MODE` for the reverse direction.
-
-## Downstream representation probing
-
-Extract Flow embeddings and RDKit descriptor/fingerprint labels aligned to the
-test SMILES:
-
-```bash
-python src/extract_flow_embeddings_and_properties.py \
-  --data_dir data/processed \
-  --checkpoint_dir checkpoints \
-  --source_mode ir --target_mode raman \
-  --backbone vibradit \
-  --dit_patch_size 20 --dit_hidden_dim 384 --dit_depth 8 --dit_num_heads 6 \
-  --smiles_path data/processed/test_smiles.txt \
-  --t_for_embedding 0.5 --embedding_type hidden --embedding_num_steps 8 \
-  --output_dir downstream/qm9s_ir2raman
-```
-
-Then probe each feature set (IR raw / Raman raw / Flow embedding / Morgan
-fingerprint / Flow+FP) with a ridge or random-forest regressor:
-
-```bash
-python src/train_downstream.py \
-  --feature_dir downstream/qm9s_ir2raman \
-  --source_mode ir --target_mode raman \
-  --target_property LogP \
-  --model_type ridge --num_seeds 5
-```
-
-## Analysis and figures
-
-- **Scaffold-class R²:** `analyze_scaffold_performance.py` then
-  `build_scaffold_r2_barplots.py`.
-- **Embedding UMAPs:** `build_fig4_embedding_umap.py` and the `build_fig4_*`
-  companions.
-- **OOD downstream summaries:** `build_vibench_ood_downstream_plots.py`.
-- **Peak-resolved summary:** `src/plot_bidirectional_peak_resolved_summary.py`.
-- **Flow trajectory illustration:** `visualize_flow_matching.py`.
-
-## Reproducing the paper
-
-- All compared models share a fixed-seed random split
-  (train/val/test = 0.70/0.15/0.15) via `get_paired_loaders(..., seed=...)`.
-  The QM9S split uses seed 2 (90,871 / 19,472 / 19,474 molecules).
-- Main-table numbers are the mean ± s.d. over **4 seeds**; downstream probes use
-  **5 seeds**.
-- For the OOD study, train only on the ViBench-QM9 source domain and evaluate on
-  the held-out domains without per-dataset tuning (same backbone width/depth/heads,
-  only the sequence length changes with map size).
-- Expected checkpoint names: `flow_{src}2{tgt}_vibradit_best_seed{seed}.pt`.
-- The standalone `vibradit_flow.py` reproduces the core training/inference loop
-  in a single file if you prefer to run without the `src/` package layout.
-
-## Default hyperparameters
-
-| Group | Hyperparameter | Value |
-|-------|----------------|-------|
-| Architecture | hidden width `d` | 384 |
-| | DiT blocks (depth) | 8 |
-| | attention heads | 6 |
-| | patch size `P` | 20 |
-| | conditioning | adaLN-Zero |
-| Optimization | optimizer | Adam |
-| | learning rate | 2e-4 (cosine) |
-| | weight decay | 0 |
-| | batch size | 64 |
-| | gradient clipping | 1.0 |
-| | epochs | 100 |
-| Objective | amplitude / grad. / curv. weights | 1.0 / 0.5 / 0.5 |
-| | endpoint / shape / OT / nonneg. weights | 0.5 / 0.05 / 0.02 / 0.01 |
-| | endpoint probability `p` | 0.1 |
-| Sampling | train-time endpoint ODE steps | 8 |
-| | inference ODE steps | 8 |
-| | solver | Euler / RK4 |
-
-Values above are the defaults for QM9S; the QMe14S/ViBench runs keep the same
-optimization and objective settings and only change map size and patch size.
-
-## Datasets and third-party resources
-
-SpectraFlow does not redistribute any spectra. Please obtain the datasets from
-their original sources and cite them accordingly:
-
-- **QM9S** — Zou et al., *A deep learning model for predicting selected organic
-  molecular spectra* (Nat. Comput. Sci., 2023).
-- **QMe14S** — Yuan et al., *QMe14S* dataset release (2025).
-- **ViBench / Vib2Mol** — Lu et al., *Vib2Mol: from vibrational spectra to
-  molecular structures* (arXiv:2503.07014, 2025).
-- **NIST Chemistry WebBook** — Linstrom & Mallard, NIST Standard Reference
-  Database Number 69, DOI: 10.18434/T4D303 (experimental IR inputs).
-- **OpenSpecy** — Cowger et al., *Anal. Chem.* 93, 7543–7548 (2021),
-  DOI: 10.1021/acs.analchem.1c00123 (cross-library experimental spectra).
-- **RRUFF** — Lafuente et al., *The power of databases: the RRUFF project* (2015),
-  DOI: 10.1515/9783110417104-003 (mineral identifiers).
-
-The illustrative Raman-timing benchmark uses **MLatom** (Dral et al., *JCTC* 20,
-1193–1213, 2024) with **GFN2-xTB** (Bannwarth et al., *JCTC* 15, 1652–1671, 2019)
-Hessians and **PTB** (Grimme et al., *J. Chem. Phys.* 158, 124111, 2023)
-polarizability derivatives.
-
-## Citation
-
-If you use SpectraFlow, please cite the accompanying manuscript. A BibTeX entry
-will be added here upon publication.
+The accompanying manuscript is an unpublished draft. A publication citation will
+be added when available; this repository does not establish an acceptance status.

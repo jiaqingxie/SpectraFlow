@@ -1,0 +1,27 @@
+{
+  "overleaf_project": "69327bfc700f669c9e6d9240",
+  "commit": "b42f38bdc48aa32b04a250409a0ef2df00a43508",
+  "retrieved_date": "2026-10-03",
+  "files": [
+    {
+      "file": "sn-article.tex",
+      "sha256": "a86f984bacf54b2f6fdfa2b2c87a40990db7c1d490eec40da4ad59e3e662a4ce"
+    },
+    {
+      "file": "sn-bibliography.bib",
+      "sha256": "59816c4dd4ae8f54aa5a51a28662fa5b705c4238f8e78d6506355f9037fc9bca"
+    },
+    {
+      "file": "sections/results.tex",
+      "sha256": "468cde5c0a8f67e6e75badd25bc65f7aee413617fc0d8d761353b9a65305605e"
+    },
+    {
+      "file": "sections/introduction.tex",
+      "sha256": "4dd54591962307e6aef8a7f260e1930dc7db23d4a2793f55d75b52a740e988f6"
+    },
+    {
+      "file": "sections/discussion.tex",
+      "sha256": "8aaac59a5b79ca2c04627717d10eabde2fcb78654440353e27af6781b5eb04b9"
+    }
+  ]
+}

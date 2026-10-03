@@ -1,0 +1,43 @@
+{
+  "purpose": "Figure reconstruction from published numerical source inputs; no model weights",
+  "files": {
+    "downstream_metrics.csv": {
+      "bytes": 32598,
+      "sha256": "d8f943ea28898f5f509968e80eb3a91759924f81496451521a60f59406373a6d"
+    },
+    "qm9s_quantile_examples.npz": {
+      "bytes": 222905,
+      "sha256": "d7613cc04a5fed4d651b5566e6797a800ed3d2d01b4d4facf9550c3c08803cb5"
+    },
+    "qm9s_quantile_selection.csv": {
+      "bytes": 579,
+      "sha256": "b81db1d932e48f59312eb73a04bdde5c4eda4983a35382551b6296c68c8846af"
+    },
+    "recomputed_summary.csv": {
+      "bytes": 1479,
+      "sha256": "1ef378a289f8ce1dfddffab9e80af51e6dbdb7a521289bc129b5f88936929690"
+    },
+    "rruff_physical_order_predictions.npz": {
+      "bytes": 1224798,
+      "sha256": "21b53b4414bfccc3760d57835274395712ab40af86dce5fadec1ac66a92aaa2c"
+    },
+    "rruff_recomputed_per_pair.csv": {
+      "bytes": 20706,
+      "sha256": "49317de261340f0d8318a7c5793d8c084aee80a0eb31c510162684e6ec6e417a"
+    },
+    "saved_metrics_inventory.csv": {
+      "bytes": 18489,
+      "sha256": "256c3c370568363fc472797029495e18783d98377fc8c229ddb3d4aa30bf9e88"
+    }
+  },
+  "provenance": {
+    "qm9s": "Saved fixed seed-2 test predictions; quantile-selected examples",
+    "rruff": "147 external ID-disjoint pairs, restored to physical wavenumber order",
+    "downstream": "Saved five-split ridge summaries; independently fitted per domain"
+  },
+  "evidence_limits": [
+    "Does not establish four-seed checkpoint reproduction",
+    "Archived QM9 OOD evaluated a re-split subset",
+    "Original NIST identity matching is invalid and excluded from figures"
+  ]
+}

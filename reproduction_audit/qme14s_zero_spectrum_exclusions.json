@@ -1,0 +1,13 @@
+{
+  "dataset": "QMe14S",
+  "seed": 2,
+  "test_n": 27916,
+  "omitted_n": 256,
+  "identical_omitted_test_indices_both_directions": true,
+  "omitted_ir_all_zero_n": 256,
+  "omitted_raman_all_zero_n": 256,
+  "omitted_ir_nonfinite_n": 0,
+  "omitted_raman_nonfinite_n": 0,
+  "row_manifest": "qme14s_excluded_test_rows.csv",
+  "evidence_level": "reference_data_and_saved_index_audit"
+}

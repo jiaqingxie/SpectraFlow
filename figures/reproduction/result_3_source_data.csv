@@ -1,0 +1,401 @@
+dataset,property,feature,model,seeds,r2_mean,r2_std,rmse_mean,rmse_std
+pahs,LogP,IR raw,ridge,5,-1.3365,1.1194,1.8171,0.4648
+pahs,LogP,Raman raw,ridge,5,0.1059,0.2243,1.1559,0.1485
+pahs,LogP,Flow embedding,ridge,5,0.7038,0.0245,0.6708,0.0283
+pahs,LogP,Morgan fingerprint,ridge,5,0.9596,0.0061,0.2473,0.0203
+pahs,LogP,Flow + Morgan FP,ridge,5,0.9545,0.0043,0.263,0.0154
+pahs,TPSA,IR raw,ridge,5,-0.3077,0.8648,28.2354,7.6146
+pahs,TPSA,Raman raw,ridge,5,-1.4769,1.7251,38.4044,13.7047
+pahs,TPSA,Flow embedding,ridge,5,0.7498,0.0096,13.0325,0.462
+pahs,TPSA,Morgan fingerprint,ridge,5,0.9317,0.0122,6.7941,0.7184
+pahs,TPSA,Flow + Morgan FP,ridge,5,0.9255,0.0094,7.1045,0.5518
+pahs,NumHDonors,IR raw,ridge,5,-3.574,4.0539,1.5539,0.8302
+pahs,NumHDonors,Raman raw,ridge,5,-0.3683,0.7081,0.9551,0.2392
+pahs,NumHDonors,Flow embedding,ridge,5,0.7592,0.0137,0.4156,0.0277
+pahs,NumHDonors,Morgan fingerprint,ridge,5,0.9234,0.0196,0.2338,0.04
+pahs,NumHDonors,Flow + Morgan FP,ridge,5,0.9226,0.0154,0.2349,0.0308
+pahs,NumHAcceptors,IR raw,ridge,5,-3.8205,3.2137,1.7965,0.6685
+pahs,NumHAcceptors,Raman raw,ridge,5,-1.5299,1.6514,1.3134,0.4278
+pahs,NumHAcceptors,Flow embedding,ridge,5,0.6097,0.0152,0.5432,0.0191
+pahs,NumHAcceptors,Morgan fingerprint,ridge,5,0.9375,0.003,0.2172,0.0053
+pahs,NumHAcceptors,Flow + Morgan FP,ridge,5,0.9259,0.0019,0.2366,0.0041
+pahs,NumRotatableBonds,IR raw,ridge,5,-1.0266,1.124,1.1144,0.3263
+pahs,NumRotatableBonds,Raman raw,ridge,5,-1.4199,1.5812,1.2007,0.4121
+pahs,NumRotatableBonds,Flow embedding,ridge,5,0.5646,0.0586,0.5346,0.0279
+pahs,NumRotatableBonds,Morgan fingerprint,ridge,5,0.9516,0.006,0.1786,0.0138
+pahs,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.9457,0.0052,0.1893,0.0113
+pahs,RingCount,IR raw,ridge,5,-2.0661,1.2161,1.2338,0.2547
+pahs,RingCount,Raman raw,ridge,5,0.8225,0.0717,0.3003,0.0637
+pahs,RingCount,Flow embedding,ridge,5,0.6476,0.0305,0.4292,0.027
+pahs,RingCount,Morgan fingerprint,ridge,5,0.9799,0.0034,0.1023,0.0099
+pahs,RingCount,Flow + Morgan FP,ridge,5,0.9769,0.0031,0.1098,0.0089
+pahs,FractionCSP3,IR raw,ridge,5,-0.1815,0.3272,0.1016,0.0168
+pahs,FractionCSP3,Raman raw,ridge,5,0.5055,0.1296,0.0657,0.0085
+pahs,FractionCSP3,Flow embedding,ridge,5,0.7663,0.036,0.0453,0.0012
+pahs,FractionCSP3,Morgan fingerprint,ridge,5,0.9219,0.0151,0.0262,0.0026
+pahs,FractionCSP3,Flow + Morgan FP,ridge,5,0.9161,0.0194,0.0271,0.0037
+pahs,NumAromaticRings,IR raw,ridge,5,-2.0661,1.2161,1.2338,0.2547
+pahs,NumAromaticRings,Raman raw,ridge,5,0.8225,0.0717,0.3003,0.0637
+pahs,NumAromaticRings,Flow embedding,ridge,5,0.6476,0.0305,0.4292,0.027
+pahs,NumAromaticRings,Morgan fingerprint,ridge,5,0.9799,0.0034,0.1023,0.0099
+pahs,NumAromaticRings,Flow + Morgan FP,ridge,5,0.9769,0.0031,0.1098,0.0089
+pahs,MolMR,IR raw,ridge,5,-2.1033,1.6846,23.0891,6.2882
+pahs,MolMR,Raman raw,ridge,5,0.2934,0.5794,10.6014,5.0262
+pahs,MolMR,Flow embedding,ridge,5,0.6105,0.0362,8.5491,0.5144
+pahs,MolMR,Morgan fingerprint,ridge,5,0.9753,0.006,2.1311,0.1917
+pahs,MolMR,Flow + Morgan FP,ridge,5,0.9717,0.0036,2.298,0.1121
+pahs,LabuteASA,IR raw,ridge,5,-2.0676,1.6298,31.5719,8.5051
+pahs,LabuteASA,Raman raw,ridge,5,0.2394,0.5129,15.5816,5.7853
+pahs,LabuteASA,Flow embedding,ridge,5,0.5913,0.0341,12.0085,0.5751
+pahs,LabuteASA,Morgan fingerprint,ridge,5,0.9724,0.0076,3.0865,0.3394
+pahs,LabuteASA,Flow + Morgan FP,ridge,5,0.9694,0.0047,3.277,0.1927
+nist_ir,LogP,IR raw,ridge,5,-47.6184,69.5494,9.0185,7.7977
+nist_ir,LogP,Raman raw,ridge,5,-0.677,0.7163,2.0817,0.4413
+nist_ir,LogP,Flow embedding,ridge,5,0.44,0.0304,1.2332,0.0525
+nist_ir,LogP,Morgan fingerprint,ridge,5,-0.5776,0.1538,2.0655,0.069
+nist_ir,LogP,Flow + Morgan FP,ridge,5,-0.4075,0.1123,1.9518,0.0265
+nist_ir,TPSA,IR raw,ridge,5,-5.1494,3.8631,71.2061,27.3792
+nist_ir,TPSA,Raman raw,ridge,5,-0.7564,0.8581,39.114,8.4707
+nist_ir,TPSA,Flow embedding,ridge,5,0.6248,0.0281,18.6209,0.9581
+nist_ir,TPSA,Morgan fingerprint,ridge,5,0.2723,0.0729,25.8815,0.8722
+nist_ir,TPSA,Flow + Morgan FP,ridge,5,0.4441,0.0603,22.6062,0.6459
+nist_ir,NumHDonors,IR raw,ridge,5,-26.4706,44.2905,3.6329,3.5623
+nist_ir,NumHDonors,Raman raw,ridge,5,-0.8313,1.646,1.1253,0.4378
+nist_ir,NumHDonors,Flow embedding,ridge,5,0.6604,0.0174,0.5297,0.0231
+nist_ir,NumHDonors,Morgan fingerprint,ridge,5,0.2899,0.0864,0.763,0.0305
+nist_ir,NumHDonors,Flow + Morgan FP,ridge,5,0.4498,0.0613,0.6717,0.0115
+nist_ir,NumHAcceptors,IR raw,ridge,5,-5.4045,5.276,4.0276,1.8144
+nist_ir,NumHAcceptors,Raman raw,ridge,5,-0.3412,0.3417,2.0149,0.2555
+nist_ir,NumHAcceptors,Flow embedding,ridge,5,0.535,0.037,1.1958,0.0836
+nist_ir,NumHAcceptors,Morgan fingerprint,ridge,5,0.1927,0.0987,1.5693,0.041
+nist_ir,NumHAcceptors,Flow + Morgan FP,ridge,5,0.3668,0.0834,1.3888,0.022
+nist_ir,NumRotatableBonds,IR raw,ridge,5,-20.0937,28.1318,13.8733,11.2242
+nist_ir,NumRotatableBonds,Raman raw,ridge,5,-0.3293,0.7341,3.9991,0.8335
+nist_ir,NumRotatableBonds,Flow embedding,ridge,5,0.4756,0.0474,2.6054,0.1413
+nist_ir,NumRotatableBonds,Morgan fingerprint,ridge,5,-0.1416,0.2147,3.8189,0.1999
+nist_ir,NumRotatableBonds,Flow + Morgan FP,ridge,5,-0.0745,0.1538,3.715,0.1158
+nist_ir,RingCount,IR raw,ridge,5,-1.773,1.9687,1.6573,0.5608
+nist_ir,RingCount,Raman raw,ridge,5,-0.0858,0.2772,1.0772,0.1601
+nist_ir,RingCount,Flow embedding,ridge,5,0.4728,0.0366,0.7542,0.0262
+nist_ir,RingCount,Morgan fingerprint,ridge,5,0.3285,0.0477,0.8513,0.0331
+nist_ir,RingCount,Flow + Morgan FP,ridge,5,0.4674,0.0364,0.7585,0.036
+nist_ir,FractionCSP3,IR raw,ridge,5,-1.7249,2.3343,0.5268,0.2491
+nist_ir,FractionCSP3,Raman raw,ridge,5,0.5328,0.215,0.2346,0.0523
+nist_ir,FractionCSP3,Flow embedding,ridge,5,0.7852,0.016,0.1631,0.0056
+nist_ir,FractionCSP3,Morgan fingerprint,ridge,5,0.5018,0.0385,0.2484,0.0087
+nist_ir,FractionCSP3,Flow + Morgan FP,ridge,5,0.6592,0.0396,0.2053,0.0118
+nist_ir,NumAromaticRings,IR raw,ridge,5,-2.1466,2.313,1.5276,0.5512
+nist_ir,NumAromaticRings,Raman raw,ridge,5,0.4946,0.0783,0.6456,0.0528
+nist_ir,NumAromaticRings,Flow embedding,ridge,5,0.6441,0.0134,0.5434,0.018
+nist_ir,NumAromaticRings,Morgan fingerprint,ridge,5,0.3426,0.0724,0.7373,0.0402
+nist_ir,NumAromaticRings,Flow + Morgan FP,ridge,5,0.4751,0.0554,0.6589,0.0349
+nist_ir,MolMR,IR raw,ridge,5,-18.618,29.1425,82.9197,68.5185
+nist_ir,MolMR,Raman raw,ridge,5,-0.1865,0.3771,25.4505,4.2012
+nist_ir,MolMR,Flow embedding,ridge,5,0.5116,0.0192,16.508,0.5978
+nist_ir,MolMR,Morgan fingerprint,ridge,5,-0.2837,0.1119,26.7357,1.2949
+nist_ir,MolMR,Flow + Morgan FP,ridge,5,-0.1081,0.0556,24.8506,0.6739
+nist_ir,LabuteASA,IR raw,ridge,5,-15.6901,24.863,112.51,91.9574
+nist_ir,LabuteASA,Raman raw,ridge,5,-0.3579,0.5239,39.9406,7.7689
+nist_ir,LabuteASA,Flow embedding,ridge,5,0.5041,0.0168,24.5106,0.8329
+nist_ir,LabuteASA,Morgan fingerprint,ridge,5,-0.2664,0.1046,39.1224,1.5647
+nist_ir,LabuteASA,Flow + Morgan FP,ridge,5,-0.0935,0.05,36.3744,0.8086
+peptide_mod,LogP,IR raw,ridge,5,-0.2061,0.4075,1.454,0.2647
+peptide_mod,LogP,Raman raw,ridge,5,-0.2615,1.7781,1.2396,0.8812
+peptide_mod,LogP,Flow embedding,ridge,5,0.5411,0.0241,0.9067,0.0115
+peptide_mod,LogP,Morgan fingerprint,ridge,5,0.984,0.0016,0.1689,0.0068
+peptide_mod,LogP,Flow + Morgan FP,ridge,5,0.9829,0.0021,0.1749,0.0086
+peptide_mod,TPSA,IR raw,ridge,5,-0.0348,0.1695,36.7188,3.562
+peptide_mod,TPSA,Raman raw,ridge,5,0.1017,0.2399,34.0868,5.2863
+peptide_mod,TPSA,Flow embedding,ridge,5,0.5887,0.0144,23.1973,0.7011
+peptide_mod,TPSA,Morgan fingerprint,ridge,5,0.9497,0.0015,8.1142,0.1613
+peptide_mod,TPSA,Flow + Morgan FP,ridge,5,0.9493,0.0033,8.1371,0.2095
+peptide_mod,NumHDonors,IR raw,ridge,5,-0.3279,0.5332,1.2717,0.2346
+peptide_mod,NumHDonors,Raman raw,ridge,5,-0.1255,0.6209,1.1582,0.305
+peptide_mod,NumHDonors,Flow embedding,ridge,5,0.5445,0.0065,0.7576,0.0168
+peptide_mod,NumHDonors,Morgan fingerprint,ridge,5,0.9356,0.0009,0.2848,0.0055
+peptide_mod,NumHDonors,Flow + Morgan FP,ridge,5,0.9355,0.003,0.2849,0.0076
+peptide_mod,NumHAcceptors,IR raw,ridge,5,-0.2534,0.5274,1.6397,0.2987
+peptide_mod,NumHAcceptors,Raman raw,ridge,5,0.3212,0.0754,1.23,0.0816
+peptide_mod,NumHAcceptors,Flow embedding,ridge,5,0.5432,0.0234,1.0096,0.0305
+peptide_mod,NumHAcceptors,Morgan fingerprint,ridge,5,0.9581,0.0032,0.3054,0.0095
+peptide_mod,NumHAcceptors,Flow + Morgan FP,ridge,5,0.958,0.003,0.3061,0.0105
+peptide_mod,NumRotatableBonds,IR raw,ridge,5,-0.5918,0.4834,2.6091,0.4137
+peptide_mod,NumRotatableBonds,Raman raw,ridge,5,-0.3772,0.7346,2.3854,0.5655
+peptide_mod,NumRotatableBonds,Flow embedding,ridge,5,0.3955,0.0307,1.6278,0.043
+peptide_mod,NumRotatableBonds,Morgan fingerprint,ridge,5,0.9251,0.006,0.5724,0.0188
+peptide_mod,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.9249,0.0049,0.5737,0.0174
+peptide_mod,RingCount,IR raw,ridge,5,0.186,0.018,0.7733,0.0096
+peptide_mod,RingCount,Raman raw,ridge,5,0.0838,1.3079,0.6702,0.4635
+peptide_mod,RingCount,Flow embedding,ridge,5,0.423,0.02,0.651,0.0148
+peptide_mod,RingCount,Morgan fingerprint,ridge,5,0.9733,0.0027,0.1399,0.0075
+peptide_mod,RingCount,Flow + Morgan FP,ridge,5,0.9726,0.0024,0.1418,0.0068
+peptide_mod,FractionCSP3,IR raw,ridge,5,0.0282,0.0722,0.1289,0.0042
+peptide_mod,FractionCSP3,Raman raw,ridge,5,0.7836,0.054,0.0604,0.0067
+peptide_mod,FractionCSP3,Flow embedding,ridge,5,0.5108,0.0274,0.0915,0.0023
+peptide_mod,FractionCSP3,Morgan fingerprint,ridge,5,0.9842,0.0008,0.0164,0.0004
+peptide_mod,FractionCSP3,Flow + Morgan FP,ridge,5,0.9831,0.0006,0.017,0.0003
+peptide_mod,NumAromaticRings,IR raw,ridge,5,0.1872,0.0321,0.7367,0.0179
+peptide_mod,NumAromaticRings,Raman raw,ridge,5,0.1107,1.2449,0.6273,0.4435
+peptide_mod,NumAromaticRings,Flow embedding,ridge,5,0.4601,0.0206,0.6004,0.0115
+peptide_mod,NumAromaticRings,Morgan fingerprint,ridge,5,0.9713,0.0037,0.1381,0.0089
+peptide_mod,NumAromaticRings,Flow + Morgan FP,ridge,5,0.9705,0.0034,0.1401,0.0082
+peptide_mod,MolMR,IR raw,ridge,5,-0.5077,0.5194,22.2268,4.0529
+peptide_mod,MolMR,Raman raw,ridge,5,-0.2154,0.7487,19.469,5.3799
+peptide_mod,MolMR,Flow embedding,ridge,5,0.4391,0.024,13.7804,0.2197
+peptide_mod,MolMR,Morgan fingerprint,ridge,5,0.9155,0.0068,5.3459,0.162
+peptide_mod,MolMR,Flow + Morgan FP,ridge,5,0.9145,0.0064,5.3763,0.1539
+peptide_mod,LabuteASA,IR raw,ridge,5,-0.5331,0.5135,33.5522,5.7541
+peptide_mod,LabuteASA,Raman raw,ridge,5,-0.3945,0.7442,31.3952,7.8538
+peptide_mod,LabuteASA,Flow embedding,ridge,5,0.4291,0.0301,20.7823,0.4288
+peptide_mod,LabuteASA,Morgan fingerprint,ridge,5,0.9038,0.0076,8.5251,0.2372
+peptide_mod,LabuteASA,Flow + Morgan FP,ridge,5,0.9031,0.0069,8.559,0.2288
+peptide,LogP,IR raw,ridge,5,0.4581,0.4441,1.0654,0.4
+peptide,LogP,Raman raw,ridge,5,0.8093,0.0125,0.6775,0.0266
+peptide,LogP,Flow embedding,ridge,5,0.7496,0.0071,0.7765,0.0143
+peptide,LogP,Morgan fingerprint,ridge,5,0.9756,0.0021,0.2421,0.0097
+peptide,LogP,Flow + Morgan FP,ridge,5,0.9761,0.0019,0.2395,0.0094
+peptide,TPSA,IR raw,ridge,5,-4.7605,6.3915,68.9383,49.8906
+peptide,TPSA,Raman raw,ridge,5,0.6143,0.0309,22.0191,0.7054
+peptide,TPSA,Flow embedding,ridge,5,0.73,0.018,18.4246,0.4574
+peptide,TPSA,Morgan fingerprint,ridge,5,0.938,0.0057,8.8296,0.3441
+peptide,TPSA,Flow + Morgan FP,ridge,5,0.9419,0.0045,8.5435,0.2461
+peptide,NumHDonors,IR raw,ridge,5,-14.4653,19.2676,3.5564,3.3837
+peptide,NumHDonors,Raman raw,ridge,5,0.6153,0.0178,0.7703,0.0131
+peptide,NumHDonors,Flow embedding,ridge,5,0.752,0.0044,0.6187,0.0081
+peptide,NumHDonors,Morgan fingerprint,ridge,5,0.9362,0.0053,0.3136,0.0105
+peptide,NumHDonors,Flow + Morgan FP,ridge,5,0.9405,0.0045,0.3027,0.0084
+peptide,NumHAcceptors,IR raw,ridge,5,-11.3729,15.7607,3.6784,3.2879
+peptide,NumHAcceptors,Raman raw,ridge,5,0.6205,0.0277,0.8615,0.0207
+peptide,NumHAcceptors,Flow embedding,ridge,5,0.6599,0.0166,0.816,0.0095
+peptide,NumHAcceptors,Morgan fingerprint,ridge,5,0.9374,0.0071,0.3497,0.0166
+peptide,NumHAcceptors,Flow + Morgan FP,ridge,5,0.94,0.0066,0.3421,0.015
+peptide,NumRotatableBonds,IR raw,ridge,5,-15.8606,19.8995,6.8954,5.8308
+peptide,NumRotatableBonds,Raman raw,ridge,5,0.3368,0.1847,1.7655,0.2605
+peptide,NumRotatableBonds,Flow embedding,ridge,5,0.522,0.02,1.5086,0.0434
+peptide,NumRotatableBonds,Morgan fingerprint,ridge,5,0.9068,0.0088,0.6651,0.0198
+peptide,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.917,0.0051,0.6282,0.0117
+peptide,RingCount,IR raw,ridge,5,0.6093,0.0634,0.6874,0.0611
+peptide,RingCount,Raman raw,ridge,5,0.8445,0.0097,0.435,0.0208
+peptide,RingCount,Flow embedding,ridge,5,0.705,0.0118,0.599,0.0175
+peptide,RingCount,Morgan fingerprint,ridge,5,0.9657,0.0033,0.2042,0.0132
+peptide,RingCount,Flow + Morgan FP,ridge,5,0.9675,0.0028,0.1987,0.0114
+peptide,FractionCSP3,IR raw,ridge,5,0.1744,0.6769,0.1201,0.0548
+peptide,FractionCSP3,Raman raw,ridge,5,0.904,0.0028,0.0449,0.0008
+peptide,FractionCSP3,Flow embedding,ridge,5,0.8062,0.0053,0.0638,0.0012
+peptide,FractionCSP3,Morgan fingerprint,ridge,5,0.9797,0.0015,0.0207,0.0007
+peptide,FractionCSP3,Flow + Morgan FP,ridge,5,0.9813,0.0011,0.0198,0.0006
+peptide,NumAromaticRings,IR raw,ridge,5,0.5007,0.2805,0.7324,0.221
+peptide,NumAromaticRings,Raman raw,ridge,5,0.8748,0.0086,0.3804,0.0169
+peptide,NumAromaticRings,Flow embedding,ridge,5,0.745,0.0085,0.5432,0.0159
+peptide,NumAromaticRings,Morgan fingerprint,ridge,5,0.9642,0.0035,0.2033,0.0133
+peptide,NumAromaticRings,Flow + Morgan FP,ridge,5,0.9661,0.003,0.1979,0.012
+peptide,MolMR,IR raw,ridge,5,-11.0562,13.915,58.3842,48.751
+peptide,MolMR,Raman raw,ridge,5,0.5851,0.0541,14.0169,1.0383
+peptide,MolMR,Flow embedding,ridge,5,0.676,0.013,12.402,0.3214
+peptide,MolMR,Morgan fingerprint,ridge,5,0.9081,0.0069,6.6014,0.2179
+peptide,MolMR,Flow + Morgan FP,ridge,5,0.9185,0.0038,6.2193,0.1406
+peptide,LabuteASA,IR raw,ridge,5,-12.0106,14.8879,89.1411,72.8813
+peptide,LabuteASA,Raman raw,ridge,5,0.5271,0.0696,21.8258,1.7556
+peptide,LabuteASA,Flow embedding,ridge,5,0.6619,0.0159,18.4846,0.4972
+peptide,LabuteASA,Morgan fingerprint,ridge,5,0.8975,0.0078,10.1681,0.3089
+peptide,LabuteASA,Flow + Morgan FP,ridge,5,0.909,0.0047,9.5861,0.1837
+geom,LogP,IR raw,ridge,5,-13.1449,15.5651,2.9812,2.2691
+geom,LogP,Raman raw,ridge,5,0.5148,0.0451,0.6961,0.0335
+geom,LogP,Flow embedding,ridge,5,0.6779,0.0077,0.5677,0.0057
+geom,LogP,Morgan fingerprint,ridge,5,0.845,0.0062,0.3937,0.0079
+geom,LogP,Flow + Morgan FP,ridge,5,0.872,0.0046,0.3578,0.0058
+geom,TPSA,IR raw,ridge,5,-16.4618,21.031,59.1882,55.93
+geom,TPSA,Raman raw,ridge,5,0.6214,0.0431,12.0619,0.6493
+geom,TPSA,Flow embedding,ridge,5,0.7463,0.0088,9.8889,0.1864
+geom,TPSA,Morgan fingerprint,ridge,5,0.8623,0.0041,7.2861,0.1247
+geom,TPSA,Flow + Morgan FP,ridge,5,0.894,0.005,6.3907,0.1474
+geom,NumHDonors,IR raw,ridge,5,-37.974,47.6822,3.901,3.7925
+geom,NumHDonors,Raman raw,ridge,5,0.6042,0.024,0.5526,0.0182
+geom,NumHDonors,Flow embedding,ridge,5,0.6955,0.0209,0.4845,0.0147
+geom,NumHDonors,Morgan fingerprint,ridge,5,0.8659,0.0057,0.3217,0.0047
+geom,NumHDonors,Flow + Morgan FP,ridge,5,0.8921,0.0031,0.2886,0.0035
+geom,NumHAcceptors,IR raw,ridge,5,0.1352,0.284,0.8138,0.1244
+geom,NumHAcceptors,Raman raw,ridge,5,0.3429,0.0651,0.7193,0.0439
+geom,NumHAcceptors,Flow embedding,ridge,5,0.6262,0.0089,0.543,0.0141
+geom,NumHAcceptors,Morgan fingerprint,ridge,5,0.8124,0.0083,0.3844,0.0028
+geom,NumHAcceptors,Flow + Morgan FP,ridge,5,0.8461,0.0098,0.348,0.0065
+geom,NumRotatableBonds,IR raw,ridge,5,-10.582,12.4079,3.2184,2.2853
+geom,NumRotatableBonds,Raman raw,ridge,5,0.1729,0.0929,1.0529,0.0662
+geom,NumRotatableBonds,Flow embedding,ridge,5,0.2552,0.0262,1.0004,0.0281
+geom,NumRotatableBonds,Morgan fingerprint,ridge,5,0.8234,0.0066,0.487,0.0122
+geom,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.8159,0.0078,0.4973,0.0134
+geom,RingCount,IR raw,ridge,5,-1.1009,0.859,1.0984,0.2444
+geom,RingCount,Raman raw,ridge,5,0.5025,0.0534,0.5465,0.0275
+geom,RingCount,Flow embedding,ridge,5,0.4774,0.0205,0.561,0.0165
+geom,RingCount,Morgan fingerprint,ridge,5,0.8018,0.014,0.3454,0.0156
+geom,RingCount,Flow + Morgan FP,ridge,5,0.7965,0.0138,0.35,0.015
+geom,FractionCSP3,IR raw,ridge,5,-3.5806,3.6381,0.3661,0.1602
+geom,FractionCSP3,Raman raw,ridge,5,0.7324,0.0844,0.0957,0.0134
+geom,FractionCSP3,Flow embedding,ridge,5,0.6843,0.0121,0.1052,0.0015
+geom,FractionCSP3,Morgan fingerprint,ridge,5,0.8798,0.0048,0.0649,0.0006
+geom,FractionCSP3,Flow + Morgan FP,ridge,5,0.9031,0.0048,0.0583,0.0008
+geom,NumAromaticRings,IR raw,ridge,5,-13.1463,10.5574,0.7616,0.2887
+geom,NumAromaticRings,Raman raw,ridge,5,0.6646,0.0676,0.128,0.0143
+geom,NumAromaticRings,Flow embedding,ridge,5,0.3844,0.0299,0.1742,0.0087
+geom,NumAromaticRings,Morgan fingerprint,ridge,5,0.8767,0.0055,0.0779,0.0029
+geom,NumAromaticRings,Flow + Morgan FP,ridge,5,0.8782,0.0049,0.0775,0.0031
+geom,MolMR,IR raw,ridge,5,-4.5752,6.0258,6.2269,4.2465
+geom,MolMR,Raman raw,ridge,5,0.343,0.04,2.5908,0.0722
+geom,MolMR,Flow embedding,ridge,5,0.5155,0.004,2.2261,0.0378
+geom,MolMR,Morgan fingerprint,ridge,5,0.5799,0.0107,2.0725,0.0187
+geom,MolMR,Flow + Morgan FP,ridge,5,0.5898,0.0089,2.0483,0.03
+geom,LabuteASA,IR raw,ridge,5,-6.7051,8.2138,6.4353,4.2249
+geom,LabuteASA,Raman raw,ridge,5,0.0182,0.0932,2.771,0.1257
+geom,LabuteASA,Flow embedding,ridge,5,0.1631,0.016,2.5615,0.0557
+geom,LabuteASA,Morgan fingerprint,ridge,5,0.0488,0.0407,2.7292,0.0222
+geom,LabuteASA,Flow + Morgan FP,ridge,5,-0.0085,0.0509,2.81,0.0432
+zinc15,LogP,IR raw,ridge,5,-4479.7594,8704.9919,44.9459,66.0902
+zinc15,LogP,Raman raw,ridge,5,-5.0699,7.5339,2.474,1.5851
+zinc15,LogP,Flow embedding,ridge,5,0.4995,0.0151,0.8405,0.0138
+zinc15,LogP,Morgan fingerprint,ridge,5,0.8419,0.0056,0.4723,0.0085
+zinc15,LogP,Flow + Morgan FP,ridge,5,0.8657,0.0041,0.4353,0.0075
+zinc15,TPSA,IR raw,ridge,5,-1530.2399,2924.4805,544.5612,753.374
+zinc15,TPSA,Raman raw,ridge,5,-3.9149,4.5521,46.0065,23.1936
+zinc15,TPSA,Flow embedding,ridge,5,0.5883,0.0065,14.6855,0.2353
+zinc15,TPSA,Morgan fingerprint,ridge,5,0.8533,0.0044,8.7693,0.2894
+zinc15,TPSA,Flow + Morgan FP,ridge,5,0.877,0.0042,8.0282,0.2922
+zinc15,NumHDonors,IR raw,ridge,5,-4021.7542,7702.2041,31.4187,43.4615
+zinc15,NumHDonors,Raman raw,ridge,5,0.3913,0.0874,0.6457,0.049
+zinc15,NumHDonors,Flow embedding,ridge,5,0.6508,0.0116,0.4902,0.0124
+zinc15,NumHDonors,Morgan fingerprint,ridge,5,0.8417,0.0058,0.33,0.0097
+zinc15,NumHDonors,Flow + Morgan FP,ridge,5,0.8636,0.0047,0.3064,0.0083
+zinc15,NumHAcceptors,IR raw,ridge,5,-81.4087,131.6247,9.691,9.523
+zinc15,NumHAcceptors,Raman raw,ridge,5,-7.5057,8.1507,3.7886,2.0254
+zinc15,NumHAcceptors,Flow embedding,ridge,5,0.4106,0.0254,1.1163,0.0096
+zinc15,NumHAcceptors,Morgan fingerprint,ridge,5,0.8598,0.0085,0.5445,0.0169
+zinc15,NumHAcceptors,Flow + Morgan FP,ridge,5,0.872,0.0068,0.5202,0.0128
+zinc15,NumRotatableBonds,IR raw,ridge,5,-411.5302,787.6518,20.5086,28.3532
+zinc15,NumRotatableBonds,Raman raw,ridge,5,-2.9157,2.4413,3.1499,1.1231
+zinc15,NumRotatableBonds,Flow embedding,ridge,5,0.3554,0.0291,1.3509,0.0335
+zinc15,NumRotatableBonds,Morgan fingerprint,ridge,5,0.8872,0.0043,0.5649,0.0052
+zinc15,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.8874,0.0041,0.5645,0.0059
+zinc15,RingCount,IR raw,ridge,5,-1193.5805,2298.6579,17.111,24.8564
+zinc15,RingCount,Raman raw,ridge,5,-68.0846,92.9085,5.7367,4.3308
+zinc15,RingCount,Flow embedding,ridge,5,0.4665,0.0121,0.6189,0.0157
+zinc15,RingCount,Morgan fingerprint,ridge,5,0.8852,0.0029,0.2871,0.0074
+zinc15,RingCount,Flow + Morgan FP,ridge,5,0.8847,0.0026,0.2877,0.007
+zinc15,FractionCSP3,IR raw,ridge,5,-1.4572,1.4646,0.4492,0.1392
+zinc15,FractionCSP3,Raman raw,ridge,5,-0.5639,2.0231,0.3181,0.1944
+zinc15,FractionCSP3,Flow embedding,ridge,5,0.7627,0.0095,0.146,0.0035
+zinc15,FractionCSP3,Morgan fingerprint,ridge,5,0.9231,0.0027,0.0831,0.0012
+zinc15,FractionCSP3,Flow + Morgan FP,ridge,5,0.9431,0.0019,0.0715,0.0011
+zinc15,NumAromaticRings,IR raw,ridge,5,-145.3992,258.1232,6.4205,7.1802
+zinc15,NumAromaticRings,Raman raw,ridge,5,-2.4838,3.1807,1.2993,0.6906
+zinc15,NumAromaticRings,Flow embedding,ridge,5,0.627,0.008,0.4877,0.0127
+zinc15,NumAromaticRings,Morgan fingerprint,ridge,5,0.9268,0.0032,0.216,0.0062
+zinc15,NumAromaticRings,Flow + Morgan FP,ridge,5,0.927,0.0028,0.2157,0.0061
+zinc15,MolMR,IR raw,ridge,5,-1214.6899,2305.0228,357.2267,503.8271
+zinc15,MolMR,Raman raw,ridge,5,-14.4054,12.5082,56.5894,30.3065
+zinc15,MolMR,Flow embedding,ridge,5,0.625,0.0203,10.0769,0.2792
+zinc15,MolMR,Morgan fingerprint,ridge,5,0.9003,0.0079,5.1898,0.1039
+zinc15,MolMR,Flow + Morgan FP,ridge,5,0.9059,0.0071,5.0438,0.1027
+zinc15,LabuteASA,IR raw,ridge,5,-1255.5186,2390.7589,545.0229,778.6495
+zinc15,LabuteASA,Raman raw,ridge,5,-13.9367,12.6414,83.1075,45.808
+zinc15,LabuteASA,Flow embedding,ridge,5,0.6282,0.0225,15.0651,0.4352
+zinc15,LabuteASA,Morgan fingerprint,ridge,5,0.907,0.0078,7.5287,0.1782
+zinc15,LabuteASA,Flow + Morgan FP,ridge,5,0.9098,0.0074,7.4145,0.1726
+qm9,LogP,IR raw,ridge,5,-800.514,1601.866,13.2241,24.9103
+qm9,LogP,Raman raw,ridge,5,-1.1511,3.2393,1.1757,0.8754
+qm9,LogP,Flow embedding,ridge,5,0.5695,0.0067,0.662,0.0033
+qm9,LogP,Morgan fingerprint,ridge,5,0.8753,0.0019,0.3563,0.0023
+qm9,LogP,Flow + Morgan FP,ridge,5,0.8964,0.0017,0.3247,0.0031
+qm9,TPSA,IR raw,ridge,5,-610.2935,1221.9331,243.8206,463.1254
+qm9,TPSA,Raman raw,ridge,5,-0.8114,3.0102,21.3451,18.9498
+qm9,TPSA,Flow embedding,ridge,5,0.7413,0.0047,10.8842,0.0346
+qm9,TPSA,Morgan fingerprint,ridge,5,0.9147,0.0016,6.2514,0.0584
+qm9,TPSA,Flow + Morgan FP,ridge,5,0.9336,0.0015,5.5131,0.0666
+qm9,NumHDonors,IR raw,ridge,5,-1754.3856,3509.8028,16.2341,31.2977
+qm9,NumHDonors,Raman raw,ridge,5,0.6886,0.0387,0.4696,0.0339
+qm9,NumHDonors,Flow embedding,ridge,5,0.6736,0.0062,0.4812,0.004
+qm9,NumHDonors,Morgan fingerprint,ridge,5,0.9106,0.0016,0.2519,0.0038
+qm9,NumHDonors,Flow + Morgan FP,ridge,5,0.9311,0.0016,0.2211,0.003
+qm9,NumHAcceptors,IR raw,ridge,5,-95.2881,191.6662,5.2226,9.0163
+qm9,NumHAcceptors,Raman raw,ridge,5,-3.1163,7.0969,1.5468,1.499
+qm9,NumHAcceptors,Flow embedding,ridge,5,0.6287,0.0063,0.6461,0.0056
+qm9,NumHAcceptors,Morgan fingerprint,ridge,5,0.8826,0.0012,0.3633,0.0019
+qm9,NumHAcceptors,Flow + Morgan FP,ridge,5,0.9023,0.0013,0.3315,0.0019
+qm9,NumRotatableBonds,IR raw,ridge,5,-373.3883,747.2956,9.9813,18.0908
+qm9,NumRotatableBonds,Raman raw,ridge,5,-7.9055,16.5409,2.0759,2.4224
+qm9,NumRotatableBonds,Flow embedding,ridge,5,0.3654,0.0091,0.8637,0.0086
+qm9,NumRotatableBonds,Morgan fingerprint,ridge,5,0.8928,0.0027,0.355,0.0037
+qm9,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.8976,0.0025,0.3469,0.0034
+qm9,RingCount,IR raw,ridge,5,-220.1965,441.2873,8.5459,15.3075
+qm9,RingCount,Raman raw,ridge,5,-4.6425,10.4583,1.8322,2.1212
+qm9,RingCount,Flow embedding,ridge,5,0.5436,0.007,0.808,0.0083
+qm9,RingCount,Morgan fingerprint,ridge,5,0.8375,0.0033,0.4821,0.0051
+qm9,RingCount,Flow + Morgan FP,ridge,5,0.8536,0.0029,0.4576,0.0051
+qm9,FractionCSP3,IR raw,ridge,5,-107.3053,215.6055,1.4623,2.5309
+qm9,FractionCSP3,Raman raw,ridge,5,-0.8609,3.3261,0.263,0.2783
+qm9,FractionCSP3,Flow embedding,ridge,5,0.7623,0.0058,0.1361,0.0011
+qm9,FractionCSP3,Morgan fingerprint,ridge,5,0.9361,0.0017,0.0705,0.001
+qm9,FractionCSP3,Flow + Morgan FP,ridge,5,0.9511,0.0014,0.0617,0.0008
+qm9,NumAromaticRings,IR raw,ridge,5,-83.9783,168.5719,1.956,3.2445
+qm9,NumAromaticRings,Raman raw,ridge,5,0.4987,0.2569,0.2803,0.0684
+qm9,NumAromaticRings,Flow embedding,ridge,5,0.5539,0.0186,0.2709,0.0027
+qm9,NumAromaticRings,Morgan fingerprint,ridge,5,0.9229,0.0012,0.1127,0.0021
+qm9,NumAromaticRings,Flow + Morgan FP,ridge,5,0.927,0.0014,0.1096,0.002
+qm9,MolMR,IR raw,ridge,5,-7.0148,14.8378,6.5066,7.5251
+qm9,MolMR,Raman raw,ridge,5,-0.332,1.4386,3.6669,1.7687
+qm9,MolMR,Flow embedding,ridge,5,0.5188,0.0056,2.46,0.0186
+qm9,MolMR,Morgan fingerprint,ridge,5,0.7009,0.007,1.9393,0.0253
+qm9,MolMR,Flow + Morgan FP,ridge,5,0.7413,0.005,1.8037,0.0201
+qm9,LabuteASA,IR raw,ridge,5,-16.7195,33.601,8.7858,11.0693
+qm9,LabuteASA,Raman raw,ridge,5,-0.9011,2.0596,4.178,2.0305
+qm9,LabuteASA,Flow embedding,ridge,5,0.2692,0.0066,2.8946,0.0347
+qm9,LabuteASA,Morgan fingerprint,ridge,5,0.4408,0.0088,2.5321,0.0318
+qm9,LabuteASA,Flow + Morgan FP,ridge,5,0.4751,0.0075,2.4532,0.0278
+mols,LogP,IR raw,ridge,5,-14.3415,7.7077,4.4641,1.1457
+mols,LogP,Raman raw,ridge,5,-49.7845,76.6674,6.0287,5.7538
+mols,LogP,Flow embedding,ridge,5,0.5155,0.0042,0.8183,0.0061
+mols,LogP,Morgan fingerprint,ridge,5,0.8664,0.0033,0.4297,0.0032
+mols,LogP,Flow + Morgan FP,ridge,5,0.8885,0.0023,0.3925,0.0027
+mols,TPSA,IR raw,ridge,5,-8.6273,5.7549,65.8055,19.8795
+mols,TPSA,Raman raw,ridge,5,-2.5458,3.4524,37.0674,18.6506
+mols,TPSA,Flow embedding,ridge,5,0.6673,0.0035,12.7472,0.0653
+mols,TPSA,Morgan fingerprint,ridge,5,0.8855,0.004,7.4759,0.1364
+mols,TPSA,Flow + Morgan FP,ridge,5,0.9077,0.0033,6.7126,0.1215
+mols,NumHDonors,IR raw,ridge,5,-14.5728,8.0951,3.147,1.0189
+mols,NumHDonors,Raman raw,ridge,5,-0.7097,1.7908,0.9794,0.4757
+mols,NumHDonors,Flow embedding,ridge,5,0.6402,0.0068,0.5026,0.0058
+mols,NumHDonors,Morgan fingerprint,ridge,5,0.8868,0.0044,0.2819,0.007
+mols,NumHDonors,Flow + Morgan FP,ridge,5,0.908,0.003,0.2541,0.0058
+mols,NumHAcceptors,IR raw,ridge,5,-8.9566,10.7736,3.133,2.2173
+mols,NumHAcceptors,Raman raw,ridge,5,-0.5556,0.8153,1.4564,0.3928
+mols,NumHAcceptors,Flow embedding,ridge,5,0.5104,0.0085,0.8461,0.0149
+mols,NumHAcceptors,Morgan fingerprint,ridge,5,0.8634,0.0035,0.4468,0.0039
+mols,NumHAcceptors,Flow + Morgan FP,ridge,5,0.8822,0.0023,0.4149,0.0032
+mols,NumRotatableBonds,IR raw,ridge,5,0.0673,0.163,1.3184,0.1156
+mols,NumRotatableBonds,Raman raw,ridge,5,-37.5226,53.1371,6.7677,5.0945
+mols,NumRotatableBonds,Flow embedding,ridge,5,0.3781,0.0061,1.0805,0.0085
+mols,NumRotatableBonds,Morgan fingerprint,ridge,5,0.8922,0.0027,0.4497,0.0049
+mols,NumRotatableBonds,Flow + Morgan FP,ridge,5,0.8956,0.0024,0.4427,0.0043
+mols,RingCount,IR raw,ridge,5,-3.6081,1.7118,2.3609,0.4259
+mols,RingCount,Raman raw,ridge,5,-4.0065,6.8126,2.025,1.4035
+mols,RingCount,Flow embedding,ridge,5,0.4789,0.0068,0.8062,0.0114
+mols,RingCount,Morgan fingerprint,ridge,5,0.8335,0.0035,0.4557,0.0071
+mols,RingCount,Flow + Morgan FP,ridge,5,0.8477,0.0042,0.4358,0.0073
+mols,FractionCSP3,IR raw,ridge,5,-3.6387,3.496,0.612,0.25
+mols,FractionCSP3,Raman raw,ridge,5,-12.3837,21.5316,0.8053,0.7747
+mols,FractionCSP3,Flow embedding,ridge,5,0.7592,0.0016,0.1509,0.0011
+mols,FractionCSP3,Morgan fingerprint,ridge,5,0.939,0.0015,0.076,0.0005
+mols,FractionCSP3,Flow + Morgan FP,ridge,5,0.9534,0.0006,0.0664,0.0004
+mols,NumAromaticRings,IR raw,ridge,5,-1.9956,1.5157,1.1007,0.2862
+mols,NumAromaticRings,Raman raw,ridge,5,-0.8776,2.351,0.7517,0.4747
+mols,NumAromaticRings,Flow embedding,ridge,5,0.633,0.0055,0.3978,0.0068
+mols,NumAromaticRings,Morgan fingerprint,ridge,5,0.9369,0.0018,0.1649,0.0038
+mols,NumAromaticRings,Flow + Morgan FP,ridge,5,0.9389,0.0019,0.1622,0.0036
+mols,MolMR,IR raw,ridge,5,-3.5717,1.9294,25.5856,5.4401
+mols,MolMR,Raman raw,ridge,5,-75.4747,122.0027,75.2781,74.4776
+mols,MolMR,Flow embedding,ridge,5,0.5965,0.0087,7.768,0.0478
+mols,MolMR,Morgan fingerprint,ridge,5,0.9013,0.0035,3.8404,0.0495
+mols,MolMR,Flow + Morgan FP,ridge,5,0.9115,0.0024,3.637,0.0346
+mols,LabuteASA,IR raw,ridge,5,-4.1666,2.4331,38.9622,9.7686
+mols,LabuteASA,Raman raw,ridge,5,-81.1925,132.0698,112.7769,110.6616
+mols,LabuteASA,Flow embedding,ridge,5,0.5875,0.01,11.3435,0.1016
+mols,LabuteASA,Morgan fingerprint,ridge,5,0.9033,0.0042,5.4908,0.0903
+mols,LabuteASA,Flow + Morgan FP,ridge,5,0.9108,0.0037,5.2751,0.0809

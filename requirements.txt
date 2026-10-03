@@ -1,8 +1,8 @@
 # Core deep learning
-torch>=2.0
+torch>=2.6
 
 # Scientific stack
-numpy>=1.23,<2.0
+numpy>=1.23,<3.0
 pandas>=1.4
 scipy>=1.9
 scikit-learn>=1.1

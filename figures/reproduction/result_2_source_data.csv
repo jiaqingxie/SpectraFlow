@@ -1,0 +1,5 @@
+dataset,direction,test_index,selection_metric,error_percentile,r2,normalized_mae,result_dir
+QM9S,ir2raman,18866,normalized_mae,50,0.9860822059500756,0.004029949888399,results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2
+QM9S,ir2raman,13532,normalized_mae,90,0.944768395191858,0.0065782490680561,results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2
+QM9S,raman2ir,2427,normalized_mae,50,0.7856609939732653,0.0101373674297308,results/verify_fig1_seed2/qm9s_flow_raman2ir_vibradit_seed2
+QM9S,raman2ir,16604,normalized_mae,90,0.4567005878772987,0.0207457386333582,results/verify_fig1_seed2/qm9s_flow_raman2ir_vibradit_seed2

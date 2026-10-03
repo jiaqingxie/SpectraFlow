@@ -1,54 +1,62 @@
-# ---------------------------------------------------------------------------
-# SpectraFlow: track code + README only. Data, checkpoints, results, and the
-# LaTeX/PDF sources are intentionally excluded from the public code release.
-# ---------------------------------------------------------------------------
-
-# Datasets and raw/processed spectra (multi-GB; distributed via their sources)
-data/
-datasets/
-
-# Trained model weights and runtime outputs
-checkpoints/
-downstream/
-results/
-
-# Manuscript sources and build artifacts (not part of the code release)
-latex/
-
-# Standalone figure/image exports at repo root
-/*.png
-/*.pdf
-*.eps
-/*.svg
-
-# Keep README/documentation images
-!docs/
-!docs/**
-
-# Handoff / experiment scratch notes
-OPENSPECY_EXPERIMENT_HANDOFF.md
-
-# Local LaTeX toolchain (Tectonic binary, etc.)
+# Source, manuscript and published figures are tracked; weights and raw data are external.
+/data/
+/datasets/
+/checkpoints/
+/downstream/
+/downstream_ir2raman/
+/results/
+/reviewer_experiments/
+/github_publish/
+*.bundle
+/rruff_ir_plots/
+/reproduction_audit/checkpoint_runs/
+**/checkpoints*/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.h5
+*.hdf5
+*.lmdb
+*.db
+# Published lightweight figure source inputs (*.npz/CSV/JSON) remain tracked.
 .tooling/
-
-# PDF edit backups / temp outputs
-*.bak
-*.pdf.bak
-*.new.pdf
-
-# Python caches and virtual envs
+.cursor/
+.vscode/
+.agents/
+.codex/
+.aws/
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-
-# Editor / OS cruft
-.cursor/
-.vscode/
 .DS_Store
 Thumbs.db
-
-# Accidental files from shell redirection
+*.swp
+*.swo
+*.bak
+*.new.pdf
+.env
+.env.*
+*.pem
+id_rsa*
+id_ed25519*
+# LaTeX build products; figure PDFs in latex/figs/ remain tracked.
+latex/*.aux
+latex/*.bbl
+latex/*.blg
+latex/*.log
+latex/*.out
+latex/*.synctex.gz
+latex/*.fls
+latex/*.fdb_latexmk
+latex/sn-article.pdf
+latex/figs/figure1_tikz_source/*.aux
+latex/figs/figure1_tikz_source/*.log
+latex/figs/figure1_tikz_source/*.pdf
 /--data_dir
 /--source_csv
 /python
+/echo
+/temp_*

@@ -1,0 +1,25 @@
+{
+  "outputs": [
+    "figures/reproduction/result_1_translation.png",
+    "figures/reproduction/result_1_translation.pdf",
+    "figures/reproduction/result_1_translation.svg",
+    "figures/reproduction/result_2_quantile_examples.png",
+    "figures/reproduction/result_2_quantile_examples.pdf",
+    "figures/reproduction/result_2_quantile_examples.svg",
+    "figures/reproduction/result_3_downstream.png",
+    "figures/reproduction/result_3_downstream.pdf",
+    "figures/reproduction/result_3_downstream.svg",
+    "figures/reproduction/result_4_rruff_external.png",
+    "figures/reproduction/result_4_rruff_external.pdf",
+    "figures/reproduction/result_4_rruff_external.svg"
+  ],
+  "style_reference": "https://github.com/ChenLiu-1996/figures4papers/tree/main/scientific-figure-making",
+  "evidence": "existing saved predictions and probe summaries; see source data files",
+  "training_seed_uncertainty": "unverified; not drawn",
+  "captions": {
+    "result_1": "Panel a: recalculated means from saved seed-2 predictions. Panels b,c: individual saved VAE/Flow evaluations, rather than the manuscript's seed-averaged OOD table. QM9 is the source-domain test subset. No seed uncertainty is inferred.",
+    "result_2": "Samples selected algorithmically nearest to the 50th and 90th percentile of normalized MAE over the full saved QM9S seed-2 test results. Vertical normalization uses the reference target range for evaluation. No physical conversion trajectory is claimed.",
+    "result_3": "Saved five-split ridge summaries for ten RDKit descriptors. Panel a averages per-property R2 means; panel b displays signed gains including decreases. These are newly fitted probes on each domain, not zero-shot property prediction.",
+    "result_4": "Panel a shows all 147 RRUFF-ID-disjoint external pairs, with raw and AsLS-corrected Pearson distributions. Panels b-d use raw R2 > 0.5 and descending raw Pearson, retaining one example per mineral name; they are selected high-correlation examples. Saved spectra were restored to physical order and checked against source HDF5 before baseline fitting. 72 of 135 test mineral names overlap development. The NIST figure is excluded because its archived molecular identity matching is invalid."
+  }
+}

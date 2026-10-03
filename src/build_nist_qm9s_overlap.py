@@ -37,14 +37,14 @@ def qm9s_split_labels(n: int, seed: int) -> np.ndarray:
     return labels
 
 
-def read_qm9s_smiles(zip_path: Path, count: int, prefix: str) -> list[str]:
-    smiles = []
-    with zipfile.ZipFile(zip_path) as archive:
-        for index in range(count):
-            member = f"{prefix}{index:06d}.csv"
-            with archive.open(member) as handle:
-                smiles.append(handle.readline().decode("utf-8").strip())
-    return smiles
+def read_qm9s_mapping(path: Path, count: int) -> list[str]:
+    """Read the original QM9S row mapping, not an unrelated broadened ZIP."""
+    rows = [line.rstrip('\n').split('\t', 1) for line in path.read_text().splitlines() if line.strip()]
+    if len(rows) != count or any(len(row) != 2 for row in rows):
+        raise ValueError('QM9S mapping count/format differs from the paired HDF5')
+    if [int(row[0]) for row in rows] != list(range(1, count+1)):
+        raise ValueError('QM9S mapping IDs must follow the original sequential row order')
+    return [row[1] for row in rows]
 
 
 def build_matches(
@@ -69,9 +69,9 @@ def build_matches(
     rows = []
     invalid_ftir = 0
     for record in metadata.to_dict("records"):
-        source_smiles = record.get("isomeric_smiles") or record.get(
-            "canonical_smiles", ""
-        )
+        source_smiles = record.get("isomeric_smiles")
+        if not isinstance(source_smiles, str) or not source_smiles:
+            source_smiles = record.get("canonical_smiles", "")
         exact_key = canonical_smiles(source_smiles, isomeric=True)
         connectivity_key = canonical_smiles(source_smiles, isomeric=False)
         if not connectivity_key:
@@ -267,13 +267,13 @@ def materialize_subset(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--metadata", type=Path, required=True)
-    parser.add_argument("--qm9s-ir-zip", type=Path, required=True)
+    parser.add_argument("--qm9s-mapping-txt", type=Path, required=True,
+                        help="Original QM9S mapping.txt aligned to HDF5 rows; QMe14S ZIPs are invalid here")
     parser.add_argument("--qm9s-ir-h5", type=Path, required=True)
     parser.add_argument("--qm9s-raman-h5", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--ftir-dir", type=Path)
     parser.add_argument("--seed", type=int, default=2)
-    parser.add_argument("--inner-prefix", default="IR_broaden/IR_")
     parser.add_argument("--ftir-high-wavenumber", type=float, default=4000.0)
     parser.add_argument("--ftir-low-wavenumber", type=float, default=399.0)
     parser.add_argument("--match-only", action="store_true")
@@ -299,9 +299,7 @@ def main() -> None:
             float(handle["x_axis"][-1]),
         )
 
-    qm9s_smiles = read_qm9s_smiles(
-        args.qm9s_ir_zip, count, args.inner_prefix
-    )
+    qm9s_smiles = read_qm9s_mapping(args.qm9s_mapping_txt, count)
     matches = build_matches(
         args.metadata,
         qm9s_smiles,

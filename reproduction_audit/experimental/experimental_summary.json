@@ -1,0 +1,53 @@
+{
+  "nist_identity_audit": {
+    "n": 84,
+    "actual_stereo_identity_matches": 0,
+    "actual_connectivity_identity_matches": 0,
+    "raw_qm9s_molecule_files_verified": 84,
+    "wrong_smiles_archive_n": 186102,
+    "wrong_smiles_archive_first_smiles": "CCS(=O)(=O)CCO",
+    "archive_first_spectrum_max_abs_difference_qme14s": 0.0,
+    "archive_first_spectrum_max_abs_difference_qm9s": 71.0634994506836,
+    "conclusion": "Archived NIST identity matching uses QMe14S SMILES indices for QM9S spectra"
+  },
+  "corrected_nist_manifest": {
+    "n_match_rows": 39,
+    "n_unique_cids": 38,
+    "n_unique_qm9s_rows": 39,
+    "locally_available_rows": 33,
+    "qm9s_split_counts_seed2": {
+      "train": 31,
+      "test": 5,
+      "valid": 3
+    },
+    "note": "Only available raw files are materialized; ascending 399-4000 source grid is an explicit protocol assumption"
+  },
+  "rruff": {
+    "n": 147,
+    "pearson_median": 0.3092728286435987,
+    "pearson_mean": 0.19259306996869688,
+    "pearson_baseline_corrected_median": 0.3397557404293389,
+    "r2_mean": -1.0413162046852342,
+    "target_restore_max_abs_error": 4.9999237083930836e-08,
+    "development_pair_n": 4720,
+    "development_identity_n": 590,
+    "test_identity_n": 147,
+    "identity_overlap_n": 0,
+    "development_mineral_names_n": 379,
+    "test_mineral_names_n": 135,
+    "mineral_name_overlap_n": 72,
+    "asls": {
+      "smoothness": 100000.0,
+      "asymmetry": 0.01,
+      "iterations": 10
+    },
+    "evidence_level": "saved_predictions_recomputed"
+  },
+  "nist_archived_invalid_identity": {
+    "n": 84,
+    "pearson_median": 0.4211377763563644,
+    "pearson_mean": 0.41151433595516,
+    "r2_mean": -0.9865542585265872,
+    "evidence_level": "saved_predictions_recomputed_identity_invalid"
+  }
+}

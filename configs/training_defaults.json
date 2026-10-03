@@ -1,0 +1,45 @@
+{
+  "archived_checkpoint_evaluation": {
+    "device": "cuda",
+    "heads": 6,
+    "steps": 8,
+    "solver": "Euler",
+    "batch_size": 32,
+    "preprocessing": "legacy_patch_permutation_except_ordered_rruff",
+    "attention_heads_provenance": "explicit documented profile; original OOD run configuration still requires confirmation"
+  },
+  "matched_training": {
+    "hidden": 384,
+    "depth": 8,
+    "heads": 6,
+    "batch_size": 32,
+    "learning_rate": 0.0002,
+    "optimizer": "Adam",
+    "epochs": 100,
+    "gradient_clip": 1.0,
+    "endpoint_weight": 0.5,
+    "endpoint_probability": 0.1,
+    "amplitude_weight": 1.0,
+    "gradient_weight": 0.5,
+    "curvature_weight": 0.5,
+    "shape_weight": 0.05,
+    "ot_weight": 0.02,
+    "ot_window": 64,
+    "steps": 8,
+    "split_seed": 2,
+    "model_seeds": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "preserve_spectral_order": true,
+    "patch_size_by_length": {
+      "3600": 20,
+      "1024": 8,
+      "576": 4
+    },
+    "nonnegative_penalty": "inactive_after_projection_not_used"
+  },
+  "note": "New matched-training profiles are separate from archived weight configurations; training is not reported complete"
+}

@@ -1,0 +1,5 @@
+index,direction,error_percentile,r2,normalized_mae,original_result_dir,selection_population_n
+18866,ir2raman,50,0.9860822059500756,0.004029949888399,results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2,19474
+13532,ir2raman,90,0.944768395191858,0.0065782490680561,results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2,19474
+2427,raman2ir,50,0.7856609939732653,0.0101373674297308,results/verify_fig1_seed2/qm9s_flow_raman2ir_vibradit_seed2,19474
+16604,raman2ir,90,0.4567005878772987,0.0207457386333582,results/verify_fig1_seed2/qm9s_flow_raman2ir_vibradit_seed2,19474

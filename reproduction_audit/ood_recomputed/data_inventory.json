@@ -1,0 +1,1157 @@
+[
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/geom_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        5659,
+        7
+      ],
+      "spectra": [
+        5659,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 5659,
+    "default_random_split_test_n": 850,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/geom_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        5659,
+        7
+      ],
+      "spectra": [
+        5659,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 5659,
+    "default_random_split_test_n": 850,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/ir_broaden_processed.h5",
+    "datasets": {
+      "physical_params": [
+        129817,
+        7
+      ],
+      "spectra": [
+        129817,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 129817,
+    "default_random_split_test_n": 19474,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/mols_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        37570,
+        7
+      ],
+      "spectra": [
+        37570,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 37570,
+    "default_random_split_test_n": 5636,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/mols_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        37570,
+        7
+      ],
+      "spectra": [
+        37570,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 37570,
+    "default_random_split_test_n": 5636,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/nist_ir_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        2588,
+        7
+      ],
+      "spectra": [
+        2588,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 2588,
+    "default_random_split_test_n": 389,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/nist_ir_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        2588,
+        7
+      ],
+      "spectra": [
+        2588,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 2588,
+    "default_random_split_test_n": 389,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/pahs_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        860,
+        7
+      ],
+      "spectra": [
+        860,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 860,
+    "default_random_split_test_n": 129,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/pahs_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        860,
+        7
+      ],
+      "spectra": [
+        860,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 860,
+    "default_random_split_test_n": 129,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/peptide_mod_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        2511,
+        7
+      ],
+      "spectra": [
+        2511,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 2511,
+    "default_random_split_test_n": 378,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/peptide_mod_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        2511,
+        7
+      ],
+      "spectra": [
+        2511,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 2511,
+    "default_random_split_test_n": 378,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/peptide_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        5191,
+        7
+      ],
+      "spectra": [
+        5191,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 5191,
+    "default_random_split_test_n": 780,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/peptide_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        5191,
+        7
+      ],
+      "spectra": [
+        5191,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 5191,
+    "default_random_split_test_n": 780,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/qm9_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        26687,
+        7
+      ],
+      "spectra": [
+        26687,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 26687,
+    "default_random_split_test_n": 4004,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/qm9_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        26687,
+        7
+      ],
+      "spectra": [
+        26687,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 26687,
+    "default_random_split_test_n": 4004,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/raman_broaden_processed.h5",
+    "datasets": {
+      "physical_params": [
+        129817,
+        7
+      ],
+      "spectra": [
+        129817,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 129817,
+    "default_random_split_test_n": 19474,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/raman_chembl/ir_broaden_processed.h5",
+    "datasets": {
+      "atoms": [
+        239360
+      ],
+      "ids": [
+        239360
+      ],
+      "lengths": [
+        239360
+      ],
+      "smiles": [
+        239360
+      ],
+      "spectra": [
+        239360,
+        324
+      ],
+      "x_axis": [
+        324
+      ]
+    },
+    "n_samples": 239360,
+    "default_random_split_test_n": 35904,
+    "axis_range": [
+      0.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/raman_chembl/raman_broaden_processed.h5",
+    "datasets": {
+      "atoms": [
+        239360
+      ],
+      "ids": [
+        239360
+      ],
+      "lengths": [
+        239360
+      ],
+      "smiles": [
+        239360
+      ],
+      "spectra": [
+        239360,
+        324
+      ],
+      "x_axis": [
+        324
+      ]
+    },
+    "n_samples": 239360,
+    "default_random_split_test_n": 35904,
+    "axis_range": [
+      0.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/raman_chembl_400/ir_broaden_processed.h5",
+    "datasets": {
+      "atoms": [
+        239360
+      ],
+      "ids": [
+        239360
+      ],
+      "lengths": [
+        239360
+      ],
+      "smiles": [
+        239360
+      ],
+      "spectra": [
+        239360,
+        400
+      ],
+      "x_axis": [
+        400
+      ]
+    },
+    "n_samples": 239360,
+    "default_random_split_test_n": 35904,
+    "axis_range": [
+      0.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/raman_chembl_400/raman_broaden_processed.h5",
+    "datasets": {
+      "atoms": [
+        239360
+      ],
+      "ids": [
+        239360
+      ],
+      "lengths": [
+        239360
+      ],
+      "smiles": [
+        239360
+      ],
+      "spectra": [
+        239360,
+        400
+      ],
+      "x_axis": [
+        400
+      ]
+    },
+    "n_samples": 239360,
+    "default_random_split_test_n": 35904,
+    "axis_range": [
+      0.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/rruff_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        319,
+        7
+      ],
+      "spectra": [
+        319,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 319,
+    "default_random_split_test_n": 49,
+    "axis_range": [
+      50.14012908935547,
+      4001.569091796875
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/rruff_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        319,
+        7
+      ],
+      "spectra": [
+        319,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 319,
+    "default_random_split_test_n": 49,
+    "axis_range": [
+      26.288000106811523,
+      1798.5
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/uv_broaden_processed.h5",
+    "datasets": {
+      "physical_params": [
+        129817,
+        7
+      ],
+      "spectra": [
+        129817,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 129817,
+    "default_random_split_test_n": 19474,
+    "axis_range": [
+      1.0,
+      15.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/vibench_test_full_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        91949,
+        7
+      ],
+      "spectra": [
+        91949,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 91949,
+    "default_random_split_test_n": 13793,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/vibench_test_full_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        91949,
+        7
+      ],
+      "spectra": [
+        91949,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 91949,
+    "default_random_split_test_n": 13793,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/zinc15_test_ir_processed.h5",
+    "datasets": {
+      "physical_params": [
+        10883,
+        7
+      ],
+      "spectra": [
+        10883,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 10883,
+    "default_random_split_test_n": 1633,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/data/processed/zinc15_test_raman_processed.h5",
+    "datasets": {
+      "physical_params": [
+        10883,
+        7
+      ],
+      "spectra": [
+        10883,
+        1024
+      ],
+      "x_axis": [
+        1024
+      ]
+    },
+    "n_samples": 10883,
+    "default_random_split_test_n": 1633,
+    "axis_range": [
+      0.0,
+      1.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy/spectra.h5",
+    "datasets": {
+      "spectra": [
+        583,
+        11679
+      ],
+      "wavenumber": [
+        583
+      ]
+    },
+    "n_samples": 583,
+    "default_random_split_test_n": 88
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_cov100/spectra.h5",
+    "datasets": {
+      "spectra": [
+        583,
+        5002
+      ],
+      "wavenumber": [
+        583
+      ]
+    },
+    "n_samples": 583,
+    "default_random_split_test_n": 88
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_cov95/spectra.h5",
+    "datasets": {
+      "spectra": [
+        583,
+        5433
+      ],
+      "wavenumber": [
+        583
+      ]
+    },
+    "n_samples": 583,
+    "default_random_split_test_n": 88
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_paired/test_ir.h5",
+    "datasets": {
+      "physical_params": [
+        90,
+        7
+      ],
+      "spectra": [
+        90,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 90,
+    "default_random_split_test_n": 15,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_paired/test_raman.h5",
+    "datasets": {
+      "physical_params": [
+        90,
+        7
+      ],
+      "spectra": [
+        90,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 90,
+    "default_random_split_test_n": 15,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_paired/train_ir.h5",
+    "datasets": {
+      "physical_params": [
+        5792,
+        7
+      ],
+      "spectra": [
+        5792,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 5792,
+    "default_random_split_test_n": 870,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_paired/train_raman.h5",
+    "datasets": {
+      "physical_params": [
+        5792,
+        7
+      ],
+      "spectra": [
+        5792,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 5792,
+    "default_random_split_test_n": 870,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576/test_ir.h5",
+    "datasets": {
+      "physical_params": [
+        147,
+        7
+      ],
+      "spectra": [
+        147,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 147,
+    "default_random_split_test_n": 23,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576/test_raman.h5",
+    "datasets": {
+      "physical_params": [
+        147,
+        7
+      ],
+      "spectra": [
+        147,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 147,
+    "default_random_split_test_n": 23,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576/train_ir.h5",
+    "datasets": {
+      "physical_params": [
+        4720,
+        7
+      ],
+      "spectra": [
+        4720,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 4720,
+    "default_random_split_test_n": 708,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576/train_raman.h5",
+    "datasets": {
+      "physical_params": [
+        4720,
+        7
+      ],
+      "spectra": [
+        4720,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 4720,
+    "default_random_split_test_n": 708,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95/test_ir.h5",
+    "datasets": {
+      "physical_params": [
+        100,
+        7
+      ],
+      "spectra": [
+        100,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 100,
+    "default_random_split_test_n": 15,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95/test_raman.h5",
+    "datasets": {
+      "physical_params": [
+        100,
+        7
+      ],
+      "spectra": [
+        100,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 100,
+    "default_random_split_test_n": 15,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95/train_ir.h5",
+    "datasets": {
+      "physical_params": [
+        1920,
+        7
+      ],
+      "spectra": [
+        1920,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 1920,
+    "default_random_split_test_n": 288,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95/train_raman.h5",
+    "datasets": {
+      "physical_params": [
+        1920,
+        7
+      ],
+      "spectra": [
+        1920,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 1920,
+    "default_random_split_test_n": 288,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95_dedup/test_ir.h5",
+    "datasets": {
+      "physical_params": [
+        73,
+        7
+      ],
+      "spectra": [
+        73,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 73,
+    "default_random_split_test_n": 12,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95_dedup/test_raman.h5",
+    "datasets": {
+      "physical_params": [
+        73,
+        7
+      ],
+      "spectra": [
+        73,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 73,
+    "default_random_split_test_n": 12,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95_dedup/train_ir.h5",
+    "datasets": {
+      "physical_params": [
+        1928,
+        7
+      ],
+      "spectra": [
+        1928,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 1928,
+    "default_random_split_test_n": 290,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_576_within95_dedup/train_raman.h5",
+    "datasets": {
+      "physical_params": [
+        1928,
+        7
+      ],
+      "spectra": [
+        1928,
+        576
+      ],
+      "x_axis": [
+        576
+      ]
+    },
+    "n_samples": 1928,
+    "default_random_split_test_n": 290,
+    "axis_range": [
+      504.0,
+      3996.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_paired/test_ir.h5",
+    "datasets": {
+      "physical_params": [
+        147,
+        7
+      ],
+      "spectra": [
+        147,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 147,
+    "default_random_split_test_n": 23,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_paired/test_raman.h5",
+    "datasets": {
+      "physical_params": [
+        147,
+        7
+      ],
+      "spectra": [
+        147,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 147,
+    "default_random_split_test_n": 23,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_paired/train_ir.h5",
+    "datasets": {
+      "physical_params": [
+        4720,
+        7
+      ],
+      "spectra": [
+        4720,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 4720,
+    "default_random_split_test_n": 708,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  },
+  {
+    "path": "/mnt/shared-storage-user/xiejiaqing/spectrogen_v2/datasets/openspecy_rruff_paired/train_raman.h5",
+    "datasets": {
+      "physical_params": [
+        4720,
+        7
+      ],
+      "spectra": [
+        4720,
+        3600
+      ],
+      "x_axis": [
+        3600
+      ]
+    },
+    "n_samples": 4720,
+    "default_random_split_test_n": 708,
+    "axis_range": [
+      500.0,
+      4000.0
+    ],
+    "axis_increasing": true
+  }
+]

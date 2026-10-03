@@ -1,0 +1,3 @@
+# Optional dependencies for LMDB / Parquet ingestion.
+lmdb>=1.3
+pyarrow>=12

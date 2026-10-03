@@ -1,0 +1,278 @@
+% Compile with LuaLaTeX. Layout follows the author's figs/Figure_1.png.
+% Spectra and heatmaps are illustrative, not newly generated model results.
+% Molecular illustrations are exact crops of the reference PNG.
+\documentclass[border=1mm]{standalone}
+\usepackage{fontspec,amsmath,amssymb,graphicx,tikz}
+\IfFileExists{../../.tools/fonts/arial/Arial.TTF}{%
+  \setmainfont{Arial.TTF}[Path=../../.tools/fonts/arial/,BoldFont=Arialbd.TTF,ItalicFont=Ariali.TTF]
+}{\IfFontExistsTF{Arial}{\setmainfont{Arial}}{\setmainfont{TeX Gyre Heros}}}
+\usetikzlibrary{arrows.meta,calc,decorations.pathreplacing}
+\definecolor{ir}{HTML}{0072B2}
+\definecolor{raman}{HTML}{D65A4A}
+\definecolor{flow}{HTML}{8056B3}
+\definecolor{ink}{HTML}{24272B}
+\definecolor{rule}{HTML}{B6B5BD}
+\definecolor{muted}{HTML}{6C7075}
+\tikzset{
+  every node/.style={font=\fontsize{13.5}{16}\selectfont,text=ink,align=center,inner sep=1.5pt},
+  small/.style={font=\fontsize{11.5}{14}\selectfont},
+  tinylabel/.style={font=\fontsize{11.5}{14}\selectfont},
+  heading/.style={font=\bfseries\fontsize{19}{22}\selectfont,anchor=west},
+  panel/.style={font=\bfseries\fontsize{25}{27}\selectfont,anchor=west},
+  box/.style={draw=flow!70!black,fill=flow!7,rounded corners=7pt,line width=.8pt},
+  arrow/.style={-{Stealth[length=3mm,width=2mm]},draw=ink,line width=1pt},
+  conditioning/.style={-{Stealth[length=2.5mm]},draw=flow,dashed,line width=1pt},
+  separator/.style={draw=rule,dash pattern=on 5pt off 4pt,line width=.8pt}}
+\input{spectrum_paths.tex}
+\input{heatmap_cells.tex}
+
+% x, y, width, height, colour, spectral coordinate macro.
+\newcommand{\tracecurve}[6]{%
+  \begin{scope}[shift={(#1,#2)},xscale=#3,yscale=#4]
+    \draw[#5,line width=.85pt,line join=round] plot coordinates {#6};
+  \end{scope}}
+\newcommand{\smallplot}[6]{%
+  \draw[draw=#5!75,fill=white,line width=.75pt] (#1,#2) rectangle ++(#3,#4);
+  \tracecurve{#1+.10}{#2+#4-.14}{#3-.20}{#4-.32}{#5}{#6}}
+% Compact row of spectral tokens, with an ellipsis near the right edge.
+\newcommand{\tokens}[4]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \foreach \k in {0,1,2,3}{
+      \draw[draw=#4!85!black,fill=#4!12,line width=.7pt]
+        ({\k*#3/6.5},0) rectangle ++({#3/6.5},.43);}
+    \node[inner sep=0] at ({4.65*#3/6.5},.18) {$\cdots$};
+    \draw[draw=#4!85!black,fill=#4!12,line width=.7pt]
+      ({5.5*#3/6.5},0) rectangle ++({#3/6.5},.43);
+  \end{scope}}
+\newcommand{\contexttokens}[3]{%
+  \foreach \k in {0,...,4}{\draw[flow!85!black,fill=flow!15,line width=.6pt]
+    ({#1+\k*#3/5},#2) rectangle ++({#3/5},.30);}}
+% Stacked heatmaps preserve the reference motif; the cell fills are schematic.
+\newcommand{\heatmap}[4]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \foreach \z in {3,2,1}{\draw[draw=#3,line width=.65pt,fill=white]
+      ({.12*\z},{-.12*\z}) rectangle ++(2.8,2.08);}
+    \fill[white] (0,0) rectangle (2.8,2.08);
+    \csname #3cells\endcsname
+    \draw[#3,line width=.85pt] (0,0) rectangle (2.8,2.08);
+    \ifnum#4=1
+      \foreach \j in {0,...,39}{\pgfmathtruncatemacro{\shade}{100-\j*2.5}
+        \fill[#3!\shade] (3.44,{-.23+\j*.055}) rectangle ++(.14,.058);}
+      \node[tinylabel,anchor=west] at (3.64,-.20) {1};
+      \node[tinylabel,anchor=west] at (3.64,1.91) {0};
+    \fi
+    \node[small,rotate=90] at (-.32,1.02) {Map row};
+  \end{scope}}
+
+% Add whitespace by translating complete rows; keep scales and block sizes fixed.
+\def\rowGapA{.75}
+\def\rowGapB{.65}
+\def\rowGapC{.60}
+\pgfmathsetmacro{\coreShiftB}{.5*\rowGapB}
+\def\upperShiftC{.25}
+\pgfmathsetmacro{\panelShiftB}{.30+\rowGapA}
+\pgfmathsetmacro{\panelShiftC}{.60+\rowGapA+\rowGapB}
+\pgfmathsetmacro{\canvasBottom}{27.60+\rowGapA+\rowGapB+\rowGapC}
+\begin{document}
+\resizebox{180mm}{!}{%
+\begin{tikzpicture}[x=1cm,y=-1.10cm]
+\path[use as bounding box] (0,0) rectangle (36,\canvasBottom);
+
+% A: same paired rows, map stacks, token motifs and context column as the PNG.
+\draw[ink,rounded corners=10pt,line width=.50pt] (.15,.15) rectangle (35.85,{9.90+\rowGapA});
+\node[panel] at (.30,.62) {a};
+\node[heading] at (1.42,.62) {Feature extraction and spectral representation};
+\node[text=raman,anchor=west] at (.92,1.90) {Raman spectrum\\(same molecule)};
+\draw[arrow] (.90,5.25)--(.90,3.25);
+\draw[ink,line width=.8pt] (.90,5.25)--(6.87,5.25);
+\tracecurve{.99}{5.11}{5.80}{1.54}{raman}{\Ramancoords}
+\node[small,rotate=90] at (.52,4.28) {Intensity (a.u.)};
+\node[small] at (3.85,5.58) {Raman shift (cm$^{-1}$)};
+\node[inner sep=0] at (5.78,3.27) {\includegraphics[width=3.55cm]{molecule_input.png}};
+\begin{scope}[shift={(0,\rowGapA)}]
+\node[text=ir,anchor=west] at (.92,6.40) {IR spectrum\\(same molecule)};
+\draw[arrow] (.90,9.07)--(.90,7.03);
+\draw[ink,line width=.8pt] (.90,9.07)--(6.87,9.07);
+\tracecurve{.99}{8.93}{5.80}{1.84}{ir}{\IRcoords}
+\node[small,rotate=90] at (.52,8.10) {Absorbance (a.u.)};
+\node[small] at (3.85,9.40) {Wavenumber (cm$^{-1}$)};
+\end{scope}
+
+\node at (10.02,2.05) {Packed spectral\\map\\(storage only)};
+\node at (14.70,2.05) {Sample-wise\\min--max\\normalization to [0,1]};
+\node at (20.06,2.05) {Flatten to 1D\\wavenumber\\sequence};
+\node at (24.79,2.05) {1D patch\\grouping\\($P$ bins per patch)};
+\node at (28.94,2.05) {Joint tokens in b\\(shape schematic)};
+\node[font=\fontsize{12}{14.5}\selectfont] at (33.35,2.05) {Source context\\embedding\\(global source summary)};
+\heatmap{8.48}{3.40}{raman}{0}
+\heatmap{13.14}{3.40}{raman}{1}
+\node[small] at (9.93,5.80) {Map column};
+\node[small] at (14.59,5.80) {Map column};
+\begin{scope}[shift={(0,\rowGapA)}]
+\heatmap{8.48}{7.05}{ir}{0}
+\heatmap{13.14}{7.05}{ir}{1}
+\node[small] at (9.93,9.44) {Map column};
+\node[small] at (14.59,9.44) {Map column};
+\end{scope}
+\draw[separator] (30.93,2.95)--(30.93,{9.67+\rowGapA});
+\foreach \yy/\cc/\rowShift/\exitOffset/\routeOffset in {4.42/raman/0/.26/1.23,8.06/ir/\rowGapA/-.26/-1.10}{
+  \begin{scope}[shift={(0,\rowShift)}]
+  \draw[arrow] (7.23,\yy)--(7.91,\yy);
+  \draw[arrow] (12.02,\yy)--(12.58,\yy);
+  \draw[arrow] (17.54,\yy)--(18.11,\yy);
+  \tokens{18.40}{\yy-.22}{3.73}{\cc}
+  \draw[arrow] (22.39,\yy)--(22.91,\yy);
+  \tokens{23.19}{\yy-.22}{3.13}{flow}
+  \draw[conditioning,draw=muted] (26.57,\yy)--(27.08,\yy);
+  \tokens{27.36}{\yy-.22}{3.12}{flow}
+  \node[small] at (24.76,\yy+.66) {$N\times P$};
+  \node[small] at (28.93,\yy+.66) {$N\times d$};
+  \node[small] at (20.27,\yy+.66) {$L$ wavenumber bins};
+  \node[box,minimum width=2.05cm,minimum height=1.27cm,fill=white] (conv-\cc) at (32.44,\yy)
+    {1D Conv\\encoder};
+  % The global encoder receives the source sequence, not the learned tokens.
+  % The lower IR row uses the added whitespace above its tokens.
+  \draw[arrow,draw=muted,line width=.65pt] (19.07,\yy+\exitOffset)--(19.07,\yy+\routeOffset)
+    --(31.02,\yy+\routeOffset)--(31.02,\yy)--(conv-\cc.west);
+  \node[tinylabel,text=muted,fill=white] at (28.82,\yy+\routeOffset) {Source sequence};
+  \draw[arrow] (conv-\cc.east)--(33.91,\yy);
+  \node at (34.92,\yy-.18) {$e_s\in\mathbb R^d$};
+  \contexttokens{34.16}{\yy+.25}{1.49}
+  \end{scope}
+}
+\node[tinylabel,text=muted] at (24.60,{9.66+\rowGapA}) {$N=\lceil L/P\rceil$; joint embedding is applied once in b.};
+
+% B: conditioning at left; stacked source/state, 1D DiT and head in the centre;
+% two translation examples at right, as in the reference.
+\begin{scope}[shift={(0,\panelShiftB)}]
+\draw[ink,rounded corners=10pt,line width=.50pt] (.15,10.18) rectangle (35.85,{18.24+\rowGapB});
+\node[panel] at (.39,10.76) {b};
+\node[heading] at (1.53,10.76) {SpectraFlow};
+\node at (13.71,11.05) {SpectraDiT generative model};
+\draw[box] (.63,11.62) rectangle (5.95,{17.82+\rowGapB});
+\node at (3.29,12.08) {Conditioning};
+\foreach \yy/\rowShift in {12.55/0,14.16/\coreShiftB,15.75/\rowGapB}{
+  \begin{scope}[shift={(0,\rowShift)}]
+  \fill[white,rounded corners=3pt] (.80,\yy) rectangle (5.76,\yy+1.43);
+  \end{scope}}
+% Clock, modality target and context-stack icons.
+\draw[ink,line width=1.2pt] (1.54,13.16) circle[radius=.44cm];
+\draw[ink,line width=1.1pt] (1.54,12.87)--(1.54,13.16)--(1.78,13.30);
+\begin{scope}[shift={(0,\coreShiftB)}]
+\foreach \r in {.44,.28,.08}{\draw[ink,line width=1pt] (1.54,14.80) circle[radius=\r cm];}
+\end{scope}
+\begin{scope}[shift={(0,\rowGapB)}]
+\foreach \k in {2,1,0}{\draw[flow!70!black,fill=flow!15,line width=.75pt]
+  ({1.17+\k*.15},{16.06+\k*.15}) rectangle ++(.49,.72);}
+\end{scope}
+\node[anchor=west,align=left] at (2.15,13.17) {Flow time $\tau$\\$e_\tau$, $\tau\in[0,1]$};
+\node[anchor=west,align=left] at (2.15,{14.80+\coreShiftB}) {Target modality\\$e_m$ (IR / Raman)};
+\node[anchor=west,align=left] at (2.15,{16.49+\rowGapB}) {Source context\\$e_s\in\mathbb R^d$\\{\fontsize{11.5}{14}\selectfont (1D Conv output)}};
+
+\draw[draw=rule,rounded corners=10pt,line width=.85pt] (6.85,11.62) rectangle (20.68,{17.82+\rowGapB});
+\node at (9.10,12.43) {Current state\\$z_\tau$, $L$ bins};
+\node at (9.10,{15.15+\rowGapB}) {Source\\spectrum\\$z_s$, $L$ bins};
+\tokens{7.37}{13.30}{3.42}{flow}
+\tokens{7.37}{16.17+\rowGapB}{3.42}{flow}
+\draw[decorate,decoration={brace,amplitude=7pt},ink,line width=.9pt]
+  (11.00,12.96)--(11.00,{16.77+\rowGapB});
+\node[small,rotate=90] at (11.45,{14.89+\coreShiftB}) {Stack: $2\times L$};
+\begin{scope}[shift={(0,\coreShiftB)}]
+\node[box,minimum width=2.50cm,minimum height=4.30cm] (patch) at (13.45,14.84)
+  {1D patch\\embedding\\[5pt]+\\[5pt]Fixed\\sinusoidal\\position};
+\node[box,fill=flow!28,minimum width=2.55cm,minimum height=4.30cm] (dit) at (16.46,14.84)
+  {SpectraDiT\\blocks $\times\,8$};
+\node[box,minimum width=2.00cm,minimum height=4.30cm] (head) at (19.22,14.84)
+  {Final\\adaLN\\[4pt]+\\[4pt]Linear\\projection};
+\draw[arrow] (11.84,14.84)--(patch.west);
+\draw[arrow] (patch.east)--(dit.west);
+\draw[arrow] (dit.east)--(head.west);
+\draw[arrow] (head.east)--(21.02,14.84);
+\node at (23.10,14.06) {Predicted velocity\\field\\$v_\theta(z_\tau,\tau,z_s,m_t)$\\$L$ bins};
+\tokens{21.37}{15.58}{3.40}{flow}
+\end{scope}
+% Explicit conditioning route to adaLN in every block and the output layer.
+\draw[conditioning] (5.95,12.10)--(6.28,12.10)--(6.28,11.37)--(19.22,11.37)--(19.22,{12.73+\coreShiftB});
+\draw[conditioning] (16.46,11.37)--(16.46,{12.73+\coreShiftB});
+\node[tinylabel,fill=white,text=flow] at (8.85,11.38) {Sum $\to$ SiLU $\to$ linear};
+\node[tinylabel,fill=white,text=flow] at (17.97,11.38) {adaLN-Zero};
+\draw[separator] (25.57,11.31)--(25.57,{17.63+\rowGapB});
+\node at (30.66,10.97) {Bidirectional spectral translation};
+\node[text=ir] at (27.36,11.81) {IR (source)};
+\node[text=raman] at (34.16,11.83) {Predicted\\Raman};
+\smallplot{25.94}{12.48}{2.90}{1.82}{ir}{\IRcoords}
+\smallplot{33.07}{12.48}{2.48}{1.82}{raman}{\Ramancoords}
+\node[box,minimum width=2.57cm,minimum height=1.23cm] at (30.96,13.38) {SpectraFlow};
+\draw[arrow] (28.98,13.38)--(29.44,13.38);
+\draw[arrow] (32.40,13.38)--(32.89,13.38);
+\begin{scope}[shift={(0,\rowGapB)}]
+\node[text=raman] at (27.38,15.13) {Raman (source)};
+\node[text=ir] at (34.16,15.13) {Predicted\\IR};
+\smallplot{25.94}{15.88}{2.90}{1.82}{raman}{\Ramancoords}
+\smallplot{33.07}{15.88}{2.48}{1.82}{ir}{\IRcoords}
+\node[box,minimum width=2.57cm,minimum height=1.23cm] at (30.96,16.78) {SpectraFlow};
+\draw[arrow] (28.98,16.78)--(29.44,16.78);
+\draw[arrow] (32.40,16.78)--(32.89,16.78);
+\end{scope}
+
+% C: retain the reference's trajectory / representation-reuse split.
+\end{scope}
+\begin{scope}[shift={(0,\panelShiftC)}]
+\draw[ink,rounded corners=10pt,line width=.50pt] (.15,18.52) rectangle (35.85,{26.84+\rowGapC});
+\node[panel] at (.39,19.11) {c};
+\node[heading] at (1.53,19.11) {Flow trajectory and downstream use};
+\draw[separator] (19.61,19.04)--(19.61,{26.34+\rowGapC});
+\node at (27.56,19.43) {Representation reuse ($\tau=0.5$ as an example)};
+
+\begin{scope}[shift={(0,\upperShiftC)}]
+\node at (2.44,21.14) {$z(0)=z_s$\\{\fontsize{11.5}{14}\selectfont Source IR}};
+\node at (7.405,21.14) {$z(\tau_1)$\\{\fontsize{11.5}{14}\selectfont Intermediate state}};
+\node at (12.505,21.14) {$z(\tau_2)$\\{\fontsize{11.5}{14}\selectfont Intermediate state}};
+\node at (17.46,21.14) {$z(1)=\widehat z_t$\\{\fontsize{11.5}{14}\selectfont Predicted Raman}};
+\smallplot{.61}{21.98}{3.53}{1.89}{flow}{\IRcoords}
+\smallplot{5.64}{21.98}{3.53}{1.89}{flow}{\OneThirdcoords}
+\smallplot{10.74}{21.98}{3.53}{1.89}{flow}{\TwoThirdscoords}
+\smallplot{15.86}{21.98}{3.20}{1.89}{flow}{\Ramancoords}
+\node at (4.80,22.93) {$\cdots$};
+\draw[arrow,draw=ir,line width=1.4pt] (3.62,20.58) to[out=36,in=142] (6.89,20.58);
+\draw[arrow,draw=ir,line width=1.4pt] (8.35,20.58) to[out=36,in=142] (11.60,20.58);
+\draw[arrow,draw=ir,line width=1.4pt] (12.88,20.58) to[out=36,in=142] (16.25,20.58);
+\end{scope}
+\begin{scope}[shift={(0,\rowGapC)}]
+\draw[arrow,draw=ir,line width=1.1pt] (3.42,24.46)--(16.06,24.46);
+\node[small,fill=white] at (9.54,24.46) {Flow time $\tau$: $0\longrightarrow1$};
+\node[small,text=muted] at (9.54,25.20) {IR $\rightarrow$ Raman example; eight Euler steps; schematic states};
+\node[small,text=muted] at (9.55,26.04) {Each translation direction starts at $\tau=0$ with its own source.};
+
+\end{scope}
+\begin{scope}[shift={(0,\upperShiftC)}]
+\node at (22.15,20.86) {Final-block tokens\\($\tau=0.5$)};
+\foreach \j in {0,1}{\foreach \i in {0,...,4}{
+  \draw[flow!85!black,fill=flow!15,line width=.7pt]
+    ({20.34+\i*.59},{21.90+\j*.70}) rectangle ++(.49,.51);}}
+\node at (21.78,23.64) {$\cdots$};
+\draw[arrow] (23.53,22.88)--(24.07,22.88);
+\node at (24.93,21.89) {Mean\\pooling};
+\contexttokens{24.34}{22.75}{1.38}
+\draw[arrow] (25.98,22.88)--(26.60,22.88);
+\node at (27.70,21.29) {SpectraFlow\\embedding\\$h\in\mathbb R^d$};
+\contexttokens{26.83}{22.75}{1.81}
+\node[box,fill=white,minimum width=1.81cm,minimum height=1.64cm] (ridge) at (30.65,22.88)
+  {Ridge\\regression};
+\draw[arrow] (28.88,22.88)--(ridge.west);
+\node at (34.03,21.03) {Molecular\\descriptors};
+\node[box,fill=white,minimum width=2.87cm,minimum height=3.10cm,align=left] (descriptors) at (34.02,23.21)
+  {$\bullet$\ LogP\\$\bullet$\ TPSA\\$\bullet$\ H-bonding\\$\bullet$\ Rings\\$\bullet$\ Size};
+\draw[arrow] (ridge.east)--(descriptors.west |- ridge.east);
+\end{scope}
+\begin{scope}[shift={(0,\rowGapC)}]
+\draw[separator,rounded corners=5pt] (22.32,24.15) rectangle (28.39,26.47);
+\node[inner sep=0] at (25.36,25.24) {\includegraphics[width=4.98cm]{molecule_reuse.png}};
+\node[tinylabel,text=muted,fill=white] at (25.36,26.42) {Molecular-property reference};
+% Molecular structures supply probe labels; they do not condition the translator.
+\draw[conditioning,draw=muted] (28.40,25.30)-|(30.65,{23.69+\upperShiftC-\rowGapC});
+\node[tinylabel,text=muted] at (31.50,25.65) {Property labels};
+\end{scope}
+\end{scope}
+\end{tikzpicture}}
+\end{document}

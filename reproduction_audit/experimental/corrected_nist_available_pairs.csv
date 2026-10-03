@@ -1,0 +1,34 @@
+cid,ftir_split,qm9s_index,qm9s_original_id,qm9s_smiles,qm9s_split_seed2,ftir_smiles,match_type,match_multiplicity,title,evidence_level,raw_spectrum_available_locally
+137995,test,580,000581,CC(C)C1CC1,train,CC(C)C1CC1,exact_isomeric,1,"Cyclopropane, (1-methylethyl)-",corrected_identity_only_no_inference,True
+83330,test,109688,109689,CCCC(CCC)C#N,train,CCCC(CCC)C#N,exact_isomeric,1,2-Propylvaleronitrile,corrected_identity_only_no_inference,True
+102692,valid,6481,006482,CCCC(C)OCC,train,CCCC(C)OCC,exact_isomeric,1,"Pentane, 2-ethoxy-",corrected_identity_only_no_inference,True
+102852,valid,88635,088636,CC1CCCN(C1)C=O,train,CC1CCCN(C1)C=O,exact_isomeric,1,3-Methylpiperidine-1-carbaldehyde,corrected_identity_only_no_inference,True
+108850,valid,443,000444,C#CC#CC#N,train,C#CC#CC#N,exact_isomeric,1,Cyanobutadiene,corrected_identity_only_no_inference,True
+117828,valid,121579,121580,CN1C=NC(=N1)N(=O)=O,train,CN1C=NC(=N1)[N+](=O)[O-],exact_isomeric,1,"1-Methyl-3-nitro-1,2,4-triazole",corrected_identity_only_no_inference,True
+544638,valid,92,000093,CC1CN1C,train,CC1CN1C,exact_isomeric,1,"1,2-Dimethylaziridine",corrected_identity_only_no_inference,True
+6427663,valid,2115,002116,CCCC1CC1C,test,CCC[C@H]1C[C@@H]1C,connectivity,1,trans-1-Methyl-2-propylcyclopropane,corrected_identity_only_no_inference,True
+79083,valid,1155,001156,CC(O)CCCO,train,CC(CCCO)O,exact_isomeric,1,"Pentane-1,4-diol",corrected_identity_only_no_inference,True
+92886,valid,123925,123926,OC1CCCCC1O,test,C1CC[C@H]([C@@H](C1)O)O,connectivity,1,"trans-1,2-Cyclohexanediol",corrected_identity_only_no_inference,True
+110725,train,85442,085443,OC1CC2CCC1C2O,train,C1CC2C(CC1C2O)O,exact_isomeric,1,"Bicyclo(2.2.1)heptane-2,7-diol",corrected_identity_only_no_inference,True
+121755,train,2679,002680,CCC1COCO1,train,CCC1COCO1,exact_isomeric,1,"4-Ethyl-1,3-dioxolane",corrected_identity_only_no_inference,True
+135988,train,14651,014652,C1CC11CCCCC1,test,C1CCC2(CC1)CC2,exact_isomeric,1,"Spiro(2,5)octane",corrected_identity_only_no_inference,True
+137075,train,942,000943,CCC1=CC=CN1,train,CCC1=CC=CN1,exact_isomeric,1,2-Ethylpyrrole,corrected_identity_only_no_inference,True
+137268,train,4849,004850,C#CC1=NC=CC=C1,train,C#CC1=CC=CC=N1,exact_isomeric,1,Ethynylpyridine,corrected_identity_only_no_inference,True
+140750,train,113497,113498,CCCCCC#CCO,valid,CCCCCC#CCO,exact_isomeric,1,2-Octyn-1-ol,corrected_identity_only_no_inference,True
+142507,train,2665,002666,COC1CC=CC1,train,COC1CC=CC1,exact_isomeric,1,"Cyclopentene, 4-methoxy-",corrected_identity_only_no_inference,True
+522009,train,106621,106622,CCC1CCC(C)(C)C1,train,CCC1CCC(C1)(C)C,exact_isomeric,1,"3-Ethyl-1,1-dimethylcyclopentane",corrected_identity_only_no_inference,True
+527855,train,2144,002145,CC(C)C1OC1C,train,CC1C(O1)C(C)C,exact_isomeric,1,"Oxirane, 2-methyl-3-(1-methylethyl)-",corrected_identity_only_no_inference,True
+529282,train,92565,092566,CCC(C)(CC)C#CC,train,CCC(C)(CC)C#CC,exact_isomeric,1,"2-Hexyne, 4-ethyl-4-methyl-",corrected_identity_only_no_inference,True
+67710,train,756,000757,FC(F)(F)C#N,train,C(#N)C(F)(F)F,exact_isomeric,1,Trifluoroacetonitrile,corrected_identity_only_no_inference,True
+76153,train,28963,028964,COC1=CN=C(C)C=N1,train,CC1=CN=C(C=N1)OC,exact_isomeric,2,2-Methoxy-5-methylpyrazine,corrected_identity_only_no_inference,True
+76153,train,28973,028974,COC1=NC=C(C)N=C1,train,CC1=CN=C(C=N1)OC,exact_isomeric,2,2-Methoxy-5-methylpyrazine,corrected_identity_only_no_inference,True
+77770,train,27882,027883,CCC(=O)N1C=CN=C1,train,CCC(=O)N1C=CN=C1,exact_isomeric,1,1-(1-oxopropyl)-1H-imidazole,corrected_identity_only_no_inference,True
+77907,train,4739,004740,CCCC1=CC=CO1,valid,CCCC1=CC=CO1,exact_isomeric,1,2-Propylfuran,corrected_identity_only_no_inference,True
+78955,train,92427,092428,COC(C)(C)CC(C)O,train,CC(CC(C)(C)OC)O,exact_isomeric,1,4-Methoxy-4-methyl-2-pentanol,corrected_identity_only_no_inference,True
+79049,train,1329,001330,CCC(C)OC=O,train,CCC(C)OC=O,exact_isomeric,1,sec-Butyl formate,corrected_identity_only_no_inference,True
+87605,train,7856,007857,CCC(C)(CC)CO,train,CCC(C)(CC)CO,exact_isomeric,1,"2,2-Diethyl-1-propanol",corrected_identity_only_no_inference,True
+92739,train,93853,093854,CC(CO)OC(C)CO,train,CC(CO)OC(C)CO,exact_isomeric,1,"2,2'-Oxydipropanol",corrected_identity_only_no_inference,True
+92831,train,6618,006619,CCOC(=O)C(C)O,train,CCOC(=O)[C@H](C)O,connectivity,1,(L)-ethyl lactate,corrected_identity_only_no_inference,True
+93050,train,123777,123778,CCCCC(O)C#C,test,CCCCC(C#C)O,exact_isomeric,1,"1-Heptyn-3-ol, (+-)-",corrected_identity_only_no_inference,True
+93083,train,340,000341,CNC(C)C#N,train,CC(C#N)NC,exact_isomeric,1,2-(Methylamino)propanenitrile,corrected_identity_only_no_inference,True
+94746,train,6274,006275,CC1(C)CCOC1=O,train,CC1(CCOC1=O)C,exact_isomeric,1,"2,2-Dimethyl-4-butyrolactone",corrected_identity_only_no_inference,True

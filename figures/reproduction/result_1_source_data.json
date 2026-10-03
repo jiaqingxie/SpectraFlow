@@ -1,0 +1,204 @@
+[
+  {
+    "result_dir": "results/verify_fig1_seed2/qm9s_flow_ir2raman_vibradit_seed2",
+    "n": 19474,
+    "r2_mean": 0.9388758629359096,
+    "pearson_mean": 0.9757899269068864,
+    "rmse_mean": 5.129665858207664
+  },
+  {
+    "result_dir": "results/verify_fig1_seed2/qm9s_flow_raman2ir_vibradit_seed2",
+    "n": 19474,
+    "r2_mean": 0.8303587086310885,
+    "pearson_mean": 0.9255252968376328,
+    "rmse_mean": 7.0071720796745005
+  },
+  {
+    "result_dir": "results/verify_fig1_seed2/qme14s_flow_ir2raman_vibradit_seed2",
+    "n": 27660,
+    "r2_mean": 0.8588507688325584,
+    "pearson_mean": 0.938168105713352,
+    "rmse_mean": 6949.087912348683
+  },
+  {
+    "result_dir": "results/verify_fig1_seed2/qme14s_flow_raman2ir_vibradit_seed2",
+    "n": 27660,
+    "r2_mean": 0.7553058434332081,
+    "pearson_mean": 0.8882170326606651,
+    "rmse_mean": 3.630139843060139
+  },
+  {
+    "result_dir": "results/vibench_full_flow_ir2raman",
+    "n": 13793,
+    "r2_mean": 0.8997852422112088,
+    "pearson_mean": 0.95514652129162,
+    "rmse_mean": 0.0223379972969118
+  },
+  {
+    "result_dir": "results/vibench_full_flow_raman2ir",
+    "n": 13793,
+    "r2_mean": 0.8645471468751806,
+    "pearson_mean": 0.9361051065493904,
+    "rmse_mean": 0.0221851677551554
+  },
+  {
+    "path": "results/qm9_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 4004,
+    "r2_mean": 0.7769365776723278
+  },
+  {
+    "path": "results/qm9_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 4004,
+    "r2_mean": 0.8090046638361638
+  },
+  {
+    "path": "results/mols_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 37570,
+    "r2_mean": 0.7777810567207878
+  },
+  {
+    "path": "results/mols_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 37570,
+    "r2_mean": 0.762137795581581
+  },
+  {
+    "path": "results/pahs_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 860,
+    "r2_mean": -0.1529763674418604
+  },
+  {
+    "path": "results/pahs_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 860,
+    "r2_mean": -0.0477708988372093
+  },
+  {
+    "path": "results/zinc15_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 10883,
+    "r2_mean": 0.4678828473766424
+  },
+  {
+    "path": "results/zinc15_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 10883,
+    "r2_mean": 0.4970226286869429
+  },
+  {
+    "path": "results/geom_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 5659,
+    "r2_mean": 0.8111093617246863
+  },
+  {
+    "path": "results/geom_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 5659,
+    "r2_mean": 0.8422397331684044
+  },
+  {
+    "path": "results/peptide_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 5191,
+    "r2_mean": 0.5173709711038336
+  },
+  {
+    "path": "results/peptide_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 5191,
+    "r2_mean": 0.4618546632633404
+  },
+  {
+    "path": "results/peptide_mod_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 2511,
+    "r2_mean": 0.4314524639585822
+  },
+  {
+    "path": "results/peptide_mod_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 2511,
+    "r2_mean": 0.3547848562325766
+  },
+  {
+    "path": "results/nist_ir_ood_vae_ir2raman/vae_ir2raman_r2_per_sample.csv",
+    "n": 2588,
+    "r2_mean": 0.4700383021638331
+  },
+  {
+    "path": "results/nist_ir_ood_flow_ir2raman_vibradit/flow_ir2raman_r2_per_sample.csv",
+    "n": 2588,
+    "r2_mean": 0.4944692890262751
+  },
+  {
+    "path": "results/qm9_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 4004,
+    "r2_mean": 0.6596155799200799
+  },
+  {
+    "path": "results/qm9_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 4004,
+    "r2_mean": 0.6350267195304695
+  },
+  {
+    "path": "results/mols_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 37570,
+    "r2_mean": 0.7245174813681129
+  },
+  {
+    "path": "results/mols_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 37570,
+    "r2_mean": 0.6010132569603407
+  },
+  {
+    "path": "results/pahs_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 860,
+    "r2_mean": 0.2521292906976744
+  },
+  {
+    "path": "results/pahs_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 860,
+    "r2_mean": 0.2715345767441861
+  },
+  {
+    "path": "results/zinc15_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 10883,
+    "r2_mean": 0.3830981390241661
+  },
+  {
+    "path": "results/zinc15_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 10883,
+    "r2_mean": 0.3752413261968207
+  },
+  {
+    "path": "results/geom_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 5659,
+    "r2_mean": 0.631663369853331
+  },
+  {
+    "path": "results/geom_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 5659,
+    "r2_mean": 0.6556059998232904
+  },
+  {
+    "path": "results/peptide_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 5191,
+    "r2_mean": 0.105463101907147
+  },
+  {
+    "path": "results/peptide_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 5191,
+    "r2_mean": 0.062635446542092
+  },
+  {
+    "path": "results/peptide_mod_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 2511,
+    "r2_mean": 0.0107700310633213
+  },
+  {
+    "path": "results/peptide_mod_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 2511,
+    "r2_mean": -0.0111096097172441
+  },
+  {
+    "path": "results/nist_ir_ood_vae_raman2ir/vae_raman2ir_r2_per_sample.csv",
+    "n": 2588,
+    "r2_mean": 0.3762965436630602
+  },
+  {
+    "path": "results/nist_ir_ood_flow_raman2ir_vibradit/flow_raman2ir_r2_per_sample.csv",
+    "n": 2588,
+    "r2_mean": 0.3876080517774343
+  }
+]
